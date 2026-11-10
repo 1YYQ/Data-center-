@@ -112,4 +112,4 @@
 | 部署与数据治理 | 已确定首版本地 Docker、后续考虑内网部署，先用外部 API 并保留本地模型能力；待确认具体供应商、资料外发范围、硬件与留存删除策略 | 模型、存储及服务边界 |
 | 交付与计算 | 文件格式、模板、单位、精度、容差、高影响结果复核要求 | 计算与导出验收 |
 
-已确定 BGE-M3 + MinerU VLM、React + FastAPI，并选择优先采用 PostgreSQL + pgvector；设计分别见 [模型与解析方案](architecture/模型与解析方案.md) 和 [前后端技术方案](architecture/前后端技术方案.md)。其余未确认事项不视为既定要求；配套组件、数据库表结构及具体部署版本仍待确定。
+已确定 BGE-M3 + MinerU VLM、React + FastAPI，并选择优先采用 PostgreSQL + pgvector；设计分别见 [模型与解析方案](architecture/模型与解析方案.md) 和 [前后端技术方案](architecture/前后端技术方案.md)。首版配套组件基线已形成；其余未确认事项不视为既定要求，数据库表结构及具体部署版本仍待确定。
