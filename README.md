@@ -19,6 +19,22 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 - [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
 - [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
 
+## 项目结构
+
+```text
+data-center/
+├── AGENTS.md       # Agent 工作约定
+├── README.md       # 项目概览
+├── doc/            # 开发文档
+│   └── README.md   # 文档入口
+├── src/            # 开发代码（当前仅占位）
+│   └── .gitkeep
+├── .gitattributes
+└── .gitignore
+```
+
+开发文档从 [doc/README.md](doc/README.md) 进入。目录职责见 [AGENTS.md](AGENTS.md#目录约定)。`data/` 和 `outputs/` 按需在本地创建，不纳入版本管理。
+
 ## 下一步
 
 1. 选取一份获准使用的非敏感手册和一个目标表格样例。
