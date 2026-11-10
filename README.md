@@ -28,7 +28,8 @@ data-center/
 ├── doc/            # 开发文档
 │   ├── README.md   # 文档入口
 │   ├── SPEC.md     # 产品规格草案
-│   └── PLAN.md     # 实施计划草案
+│   ├── PLAN.md     # 实施计划草案
+│   └── roles/      # 角色需求，每个角色一个文件
 ├── src/            # 开发代码（当前仅占位）
 │   └── .gitkeep
 ├── .gitattributes
