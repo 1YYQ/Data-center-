@@ -14,7 +14,7 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 
 ## 当前状态
 
-已建立项目工作约定与 Git 忽略规则；尚未实现资料解析、检索、计算、导出或用户界面，暂无启动命令和应用测试。
+已建立项目工作约定、目录与 Git 忽略规则，并整理 [产品规格草案](doc/SPEC.md) 与 [实施计划草案](doc/PLAN.md)；尚未实现资料解析、检索、计算、导出或用户界面，暂无启动命令和应用测试。
 
 - [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
 - [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
@@ -26,7 +26,9 @@ data-center/
 ├── AGENTS.md       # Agent 工作约定
 ├── README.md       # 项目概览
 ├── doc/            # 开发文档
-│   └── README.md   # 文档入口
+│   ├── README.md   # 文档入口
+│   ├── SPEC.md     # 产品规格草案
+│   └── PLAN.md     # 实施计划草案
 ├── src/            # 开发代码（当前仅占位）
 │   └── .gitkeep
 ├── .gitattributes

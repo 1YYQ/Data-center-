@@ -4,4 +4,7 @@
 
 ## 文档索引
 
-当前尚无专项开发文档。项目概览见 [项目 README](../README.md)，工作与目录约定见 [AGENTS.md](../AGENTS.md)。
+- [SPEC.md](SPEC.md)：产品规格草案，涵盖可信知识、完整任务流程、验证与待确认事项。
+- [PLAN.md](PLAN.md)：实施计划草案，列明阶段依赖与完成条件。
+
+项目概览见 [项目 README](../README.md)，工作与目录约定见 [AGENTS.md](../AGENTS.md)。
