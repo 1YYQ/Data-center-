@@ -9,6 +9,7 @@
 
 ## 技术方案
 
+- [前后端技术方案](architecture/前后端技术方案.md)：React + FastAPI 已确定；配套组件、接口与部署设计为草案，尚未实现。
 - [模型与解析方案](architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM，数据库优先采用 PostgreSQL + pgvector；接入、数据及迁移设计为草案，尚未实现。
 
 ## 角色需求
