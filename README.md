@@ -18,6 +18,7 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 
 - [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
 - [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
+- [数据库设计](doc/数据库设计.md)：表结构、关系、权限、版本与索引生命周期设计草案，尚未执行建表或迁移。
 - [前后端技术方案](doc/architecture/前后端技术方案.md)：已确定 React + FastAPI，并形成 TypeScript、Vite、Ant Design、SQLAlchemy、Alembic 与 Celery + RabbitMQ 等配套基线；具体版本待验证，尚未搭建应用。
 - [模型与解析方案](doc/architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM，数据库优先采用 PostgreSQL + pgvector；具体接入设计待审阅，尚未接入服务或安装数据库。
 
@@ -31,6 +32,7 @@ data-center/
 │   ├── README.md   # 文档入口
 │   ├── SPEC.md     # 产品规格草案
 │   ├── PLAN.md     # 实施计划草案
+│   ├── 数据库设计.md # 表结构与关系设计草案
 │   ├── roles/      # 角色需求，每个角色一个文件
 │   └── architecture/ # 技术方案与迁移设计
 ├── src/            # 开发代码（当前仅占位）
