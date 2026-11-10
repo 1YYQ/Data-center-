@@ -18,7 +18,7 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 
 - [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
 - [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
-- [模型与解析方案](doc/architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM 路线，具体接入设计待审阅，尚未接入服务。
+- [模型与解析方案](doc/architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM，数据库优先采用 PostgreSQL + pgvector；具体接入设计待审阅，尚未接入服务或安装数据库。
 
 ## 项目结构
 
