@@ -1,0 +1,43 @@
+# Local enterprise documents, parsed content and generated artifacts
+/data/
+/manuals/
+/uploads/
+/outputs/
+/artifacts/
+/storage/
+/indexes/
+/vector_store/
+/logs/
+*.log
+
+# Credentials and local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+secrets*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# JavaScript and build outputs
+node_modules/
+dist/
+build/
+coverage/
+
+# Local caches and editor / OS files
+.cache/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
