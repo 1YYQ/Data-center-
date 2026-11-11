@@ -14,12 +14,12 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 
 ## 当前状态
 
-已建立项目工作约定、目录与 Git 忽略规则，并整理 [产品规格草案](doc/SPEC.md) 与 [实施计划草案](doc/PLAN.md)；尚未实现资料解析、检索、计算、导出或用户界面，暂无启动命令和应用测试。
+已建立项目工作约定、目录与 Git 忽略规则，并整理 [产品规格草案](doc/requirements/SPEC.md) 与 [实施计划草案](doc/planning/PLAN.md)；尚未实现资料解析、检索、计算、导出或用户界面，暂无启动命令和应用测试。
 
 - [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
 - [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
-- [数据库设计](doc/数据库设计.md)：表结构、关系、权限、版本与索引生命周期设计草案，尚未执行建表或迁移。
-- [接口设计](doc/接口设计.md)：前后端端点、请求与响应、权限和任务状态契约草案，尚未实现或联调。
+- [数据库设计](doc/database/数据库设计.md)：表结构、关系、权限、版本与索引生命周期设计草案，尚未执行建表或迁移。
+- [接口设计](doc/api/接口设计.md)：前后端端点、请求与响应、权限和任务状态契约草案，尚未实现或联调。
 - [前后端技术方案](doc/architecture/前后端技术方案.md)：已确定 React + FastAPI，并形成 TypeScript、Vite、Ant Design、SQLAlchemy、Alembic 与 Celery + RabbitMQ 等配套基线；具体版本待验证，尚未搭建应用。
 - [模型与解析方案](doc/architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM，数据库优先采用 PostgreSQL + pgvector；具体接入设计待审阅，尚未接入服务或安装数据库。
 
@@ -31,12 +31,12 @@ data-center/
 ├── README.md       # 项目概览
 ├── doc/            # 开发文档
 │   ├── README.md   # 文档入口
-│   ├── SPEC.md     # 产品规格草案
-│   ├── PLAN.md     # 实施计划草案
-│   ├── 数据库设计.md # 表结构与关系设计草案
-│   ├── 接口设计.md # 前后端接口契约草案
+│   ├── requirements/ # 产品需求（SPEC）
+│   ├── planning/   # 实施计划与待确定项
 │   ├── roles/      # 角色需求，每个角色一个文件
-│   └── architecture/ # 技术方案与迁移设计
+│   ├── architecture/ # 技术方案与迁移设计
+│   ├── database/   # 数据库设计
+│   └── api/        # 接口设计
 ├── src/            # 开发代码（当前仅占位）
 │   └── .gitkeep
 ├── .gitattributes
@@ -46,6 +46,8 @@ data-center/
 开发文档从 [doc/README.md](doc/README.md) 进入。目录职责见 [AGENTS.md](AGENTS.md#目录约定)。`data/` 和 `outputs/` 按需在本地创建，不纳入版本管理。
 
 ## 下一步
+
+按 [开工前待确定项](doc/planning/开工前待确定项.md) 逐项讨论；已确定的技术栈不重复选型。
 
 1. 选取一份获准使用的非敏感手册和一个目标表格样例。
 2. 明确输入格式、设备与版本、计算输入、目标字段和人工核对结果。
