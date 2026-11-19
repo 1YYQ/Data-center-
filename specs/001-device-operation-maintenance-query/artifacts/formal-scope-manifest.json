@@ -1,0 +1,1698 @@
+{
+  "schema_version": "device-inventory.v1",
+  "source_root": "doc/example/doc",
+  "generated_at": "2026-11-15T15:25:23.821654+00:00",
+  "files": [
+    {
+      "file_id": "36417a09-83d1-5888-b5ab-52f35002802d",
+      "name": "70044001-FPM-8220.pdf",
+      "relative_path": "70044001-FPM-8220.pdf",
+      "sha256": "8f81e064524df2f41b04d747f64a01a5b8f379db9f21a96094715ed5226754db",
+      "byte_size": 6053958,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "f6322fa8-8cff-531a-9b31-cec4e01eee96",
+      "name": "Aolynk CB304n Cable网桥 用户手册-5W100-整本手册.pdf",
+      "relative_path": "Aolynk CB304n Cable网桥 用户手册-5W100-整本手册.pdf",
+      "sha256": "aa246f20a8b2a059b9e2c67410d0eccc2d86f3c643cc71a7b3eff6d7acff1523",
+      "byte_size": 794890,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "765c3ced-2201-50c0-be47-7f833ac781ca",
+      "name": "Aolynk CC系列室内型Cable网络集中器 用户手册-6W202-整本手册.pdf",
+      "relative_path": "Aolynk CC系列室内型Cable网络集中器 用户手册-6W202-整本手册.pdf",
+      "sha256": "96aa4dbc9d6dc02cdaedea041426542842028c6496488cad9a6c61cf66321d27",
+      "byte_size": 2175128,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "7cdf2f38-95c9-5d50-a1a4-1184b7a9e877",
+      "name": "CS2610DNW_Manuals_ALL_20240423095554.pdf",
+      "relative_path": "CS2610DNW_Manuals_ALL_20240423095554.pdf",
+      "sha256": "09e6844986a01bf62683e1b15440c15f8a2927ca0bdbf570b7bc45858d5a5e05",
+      "byte_size": 3310673,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "1b2fa007-7839-565d-a207-a266f495d6d8",
+      "name": "H3C ER2100企业级路由器 用户手册-6W104-整本手册.pdf",
+      "relative_path": "H3C ER2100企业级路由器 用户手册-6W104-整本手册.pdf",
+      "sha256": "391ecdf261f2912c8a0508df285cf0e6e35ff0d19393e3354b3070e2027742f9",
+      "byte_size": 2857896,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "a1be5752-e6a4-5c6f-8f2b-a7c7e02aff0b",
+      "name": "H3C LA2608室内无线网关 用户手册-6W100-整本手册.pdf",
+      "relative_path": "H3C LA2608室内无线网关 用户手册-6W100-整本手册.pdf",
+      "sha256": "72983cc9b60f7f165bf89d3f6cbe39d56c4db148fd4b894c70c37378f8be5c8e",
+      "byte_size": 175092,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "09367ff4-36b7-5e25-b1f6-ce19dfcee007",
+      "name": "H3C MER系列路由器 用户手册-R0821-6W105-整本手册.pdf",
+      "relative_path": "H3C MER系列路由器 用户手册-R0821-6W105-整本手册.pdf",
+      "sha256": "3117874cc4d4f9f1d30b0271005fda42530a2ed0fab6e7b572093c12ff272ff8",
+      "byte_size": 4950403,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "d4029f9b-215c-550f-ad4d-4a873f36a186",
+      "name": "H3C MSR WiNet系列云简路由器 用户手册-R0821-6W100-整本手册.pdf",
+      "relative_path": "H3C MSR WiNet系列云简路由器 用户手册-R0821-6W100-整本手册.pdf",
+      "sha256": "4512087feac3a998b76c1720fc85235c7f0f5835fc66b97f1680131e56e9f37b",
+      "byte_size": 4741486,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "f2b89810-8b50-53d8-8370-6f0283888bba",
+      "name": "H3C MSR-XS系列路由器 用户手册-R0821-6W100-整本手册.pdf",
+      "relative_path": "H3C MSR-XS系列路由器 用户手册-R0821-6W100-整本手册.pdf",
+      "sha256": "023459228ff385b0e75acd67a739cff11a603d2ce69057e80593d7c099ea0d14",
+      "byte_size": 4743174,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "05532a9f-43ea-500d-9ddf-c0b977aff7da",
+      "name": "H3C MSR系列开放多业务路由器 Web配置指导(V7)-R6728-6W102-整本手册.pdf",
+      "relative_path": "H3C MSR系列开放多业务路由器 Web配置指导(V7)-R6728-6W102-整本手册.pdf",
+      "sha256": "fbcf0150ff262dcf818e40d19c41453bb46dfd26b7e23852285aa818c4e0b417",
+      "byte_size": 6256663,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "35a089dc-61b5-5ac5-adcf-c1692d40a08d",
+      "name": "H3C NER214W路由器 用户手册-6W101-整本手册.pdf",
+      "relative_path": "H3C NER214W路由器 用户手册-6W101-整本手册.pdf",
+      "sha256": "4189e1f735430e74560e3f018a8af901d824625dbb3713b919fba73e6051f2c9",
+      "byte_size": 5742570,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "9c36321f-62e3-5691-883d-3887f543e6e0",
+      "name": "H3C NR-1200W企业级无线宽带路由器 用户手册-5W100-整本手册.pdf",
+      "relative_path": "H3C NR-1200W企业级无线宽带路由器 用户手册-5W100-整本手册.pdf",
+      "sha256": "0dd17394784744f54aef257cc0680b4795c58e0d82b689d481a6f7f6edb32e1d",
+      "byte_size": 7534417,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "46e61a5f-cf4d-5955-9fb0-9eb6246ca74d",
+      "name": "H3C UG系列路由器 用户手册-R0130-6W102-整本手册.pdf",
+      "relative_path": "H3C UG系列路由器 用户手册-R0130-6W102-整本手册.pdf",
+      "sha256": "f09f866d9f59227c46ef19f867517791305a3c1a8ab48c1415164b5c6c359d6e",
+      "byte_size": 7235645,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "d3e009fc-1c1a-5351-8e21-6039c220b6b0",
+      "name": "hak180产品安全手册.pdf",
+      "relative_path": "hak180产品安全手册.pdf",
+      "sha256": "dff3aaa8133427992d0e0693391287f936a81b4b3806bc1ebc3b047609026765",
+      "byte_size": 642896,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "57f71122-0e9f-57c0-8c35-ceeec30cd964",
+      "name": "hak180使用说明书.pdf",
+      "relative_path": "hak180使用说明书.pdf",
+      "sha256": "5f75797d1ce6e14746de41c8acd562eec3210a2a0f7ae079177561f2a8e48538",
+      "byte_size": 1302312,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "db426388-6a1f-5c89-952b-9a54ec221494",
+      "name": "hl3040网络说明书.pdf",
+      "relative_path": "hl3040网络说明书.pdf",
+      "sha256": "a2201897ee3f07cd5f2039b0d498ee02e24e4d4e22f774d24b60b36fdea6653e",
+      "byte_size": 3531874,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "9d259db7-bf4a-5272-a80c-c05f68500edd",
+      "name": "hl3070使用说明书.pdf",
+      "relative_path": "hl3070使用说明书.pdf",
+      "sha256": "49c7019c7958e05d94185ddaf91f4d0a6b091e7be1641441bffd37257c6416c5",
+      "byte_size": 15461527,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "baf3a3e0-0cd3-567a-b058-86d5d3c4bd14",
+      "name": "HUAWEI MateBook B3-410&B3-510 用户手册-(03,zh-cn,Boh&Nbl,HUAWEI).pdf",
+      "relative_path": "HUAWEI MateBook B3-410&B3-510 用户手册-(03,zh-cn,Boh&Nbl,HUAWEI).pdf",
+      "sha256": "cd56e801e43d6515a63504b64450534c6f1e461f8b6a7dbea8d9ca797800f410",
+      "byte_size": 6482086,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "4aa3b553-872d-525e-8819-89f326ab2177",
+      "name": "HUAWEI MateBook B3-420 用户指南-(NDZ,Windows11_01,zh-cn).pdf",
+      "relative_path": "HUAWEI MateBook B3-420 用户指南-(NDZ,Windows11_01,zh-cn).pdf",
+      "sha256": "ca6b7721236e05059aa344843631be51ca05231a8fceb69032e48a6096055315",
+      "byte_size": 3434232,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "65e4b0b3-a8be-5f77-a1e8-11471e4e172b",
+      "name": "HUAWEI MateBook B3-430 用户指南-(NFZ,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI MateBook B3-430 用户指南-(NFZ,Windows11_02,zh-cn).pdf",
+      "sha256": "15877cdffeb6bb874feefae0e5c3c9df987e03bbf572962bbb253f3208b4ecb6",
+      "byte_size": 2459098,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "a3047f11-d09e-5522-be5c-6eaf58062d1b",
+      "name": "HUAWEI MateBook B3-520 用户手册-(03,zh-cn,BohrDZ).pdf",
+      "relative_path": "HUAWEI MateBook B3-520 用户手册-(03,zh-cn,BohrDZ).pdf",
+      "sha256": "63fdee1c706e09c7bb9f3266cd72ceff73289900a89f12da2a2b8221303cb5c0",
+      "byte_size": 4532792,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "c3a68725-65a4-5144-8f26-267cdd8e3adf",
+      "name": "HUAWEI MateBook B5-330 用户指南-(WRTDZ-WFH9&WFE9,Windows11_01,zh-cn).pdf",
+      "relative_path": "HUAWEI MateBook B5-330 用户指南-(WRTDZ-WFH9&WFE9,Windows11_01,zh-cn).pdf",
+      "sha256": "99cb8f7c9d57dcf397b9167637498c2904f237073750986d3a275b190c433154",
+      "byte_size": 3975576,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "93f3c25a-462d-5a7d-81a9-d489960c9e22",
+      "name": "HUAWEI MateBook B5-420 用户手册-(05,zh-cn,KLV&KLVC&KLCZ).pdf",
+      "relative_path": "HUAWEI MateBook B5-420 用户手册-(05,zh-cn,KLV&KLVC&KLCZ).pdf",
+      "sha256": "a927264c556e8fddc37d3c87820f4ab0242ad86236c4ea4fc6751b5b5281871c",
+      "byte_size": 5701330,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "47c5d8e8-a417-5e96-9bab-4e067b47b325",
+      "name": "HUAWEI MateBook B5-430 用户手册-(03,zh-cn,KelvinDZ).pdf",
+      "relative_path": "HUAWEI MateBook B5-430 用户手册-(03,zh-cn,KelvinDZ).pdf",
+      "sha256": "38c5ca1278afd20613985018d39f4edd2617767dab3b08a6072510454b90fe08",
+      "byte_size": 5784509,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "aba90477-139a-5812-ac58-e8395cea6d62",
+      "name": "HUAWEI MateBook B5-440 用户指南-(KLVFZ,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI MateBook B5-440 用户指南-(KLVFZ,Windows11_02,zh-cn).pdf",
+      "sha256": "d6a9a6c0e6053bd1659f915fca5d1c20796fa3808caffa8d0b134a510ec68ad8",
+      "byte_size": 1214842,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "aa4e71ba-8ba6-529f-a984-c2efe3537164",
+      "name": "HUAWEI MateBook B7-410 用户手册-(02,zh-cn,MachDZ).pdf",
+      "relative_path": "HUAWEI MateBook B7-410 用户手册-(02,zh-cn,MachDZ).pdf",
+      "sha256": "ae50df1a3808a6151b4e892a82caf763caaf792b5edc80ddfb0f8540cfe46b4c",
+      "byte_size": 5764493,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "0fd3f35f-c099-5342-92bd-4ef937ade6ba",
+      "name": "HUAWEI MateBook B7-420 用户指南-(MRGFZ,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI MateBook B7-420 用户指南-(MRGFZ,Windows11_02,zh-cn).pdf",
+      "sha256": "60121a0bfb2e03d04bd165130feb2b9f0ba7f3fcd622e734c74a3c149317a826",
+      "byte_size": 1144524,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "89883385-11f3-50f1-aff7-c3736d0d8cc5",
+      "name": "HUAWEI MateStation B515 用户手册-(PanguL,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI MateStation B515 用户手册-(PanguL,Windows11_02,zh-cn).pdf",
+      "sha256": "a578d2f9df60844fee58abd321c3aa43cf7021e32e34379a66a9c662e5235755",
+      "byte_size": 1330072,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "b0d3ecd5-5e5c-556d-820b-191f181774b2",
+      "name": "HUAWEI Matestation B520 用户手册-(PanguBZ,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI Matestation B520 用户手册-(PanguBZ,Windows11_02,zh-cn).pdf",
+      "sha256": "9431d66c09a1700b7a9c29775d0bb18c8259aeb30f37c40c30f7bccccb4aa825",
+      "byte_size": 1879017,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "17ecd8c9-067e-5fa6-8ccf-014f6f3ed74b",
+      "name": "HUAWEI MateStation S 12代酷睿版 用户指南-(PUC,Windows11_02,zh-cn).pdf",
+      "relative_path": "HUAWEI MateStation S 12代酷睿版 用户指南-(PUC,Windows11_02,zh-cn).pdf",
+      "sha256": "b4515c17bd930f82f5ee286169eeb7203fc4228cbf5c0dd02a2ecdb27b93ad4d",
+      "byte_size": 1087599,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "eae4551d-90ea-5b04-84c8-8d530e5829fe",
+      "name": "HUAWEI PixLab B5 用户指南-(CV81Z,06,zh-cn).pdf",
+      "relative_path": "HUAWEI PixLab B5 用户指南-(CV81Z,06,zh-cn).pdf",
+      "sha256": "3ead983b773f9180c86e50e164be79a49177db04fac406940787f7d018d3f080",
+      "byte_size": 9560079,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "43cc67fa-9132-512e-a227-af91348be318",
+      "name": "LJ2268系列用户手册.pdf",
+      "relative_path": "LJ2268系列用户手册.pdf",
+      "sha256": "8aca2d5046b642d36b12af888c75731ddffb182edd9dd02c32eab8bd248ebc76",
+      "byte_size": 15082928,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "170a5e6d-6a15-5fc8-ba51-0bc31aa098c9",
+      "name": "LJ2680DN用户手册.pdf",
+      "relative_path": "LJ2680DN用户手册.pdf",
+      "sha256": "8baf42137e8b9c91903b3fede06e32119d1602104b3e6707c08dee3c5c685164",
+      "byte_size": 5233772,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "96d1eeb3-4e88-598d-9965-983ace8145e8",
+      "name": "M3070系列用户手册.pdf",
+      "relative_path": "M3070系列用户手册.pdf",
+      "sha256": "eda740a7d48bb4fce066b8b63bdaf378dcf6ae60dec87fc0deb3dd0597ef9518",
+      "byte_size": 12011837,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "06444f3d-8de6-5f45-9e1f-8981ca9386f1",
+      "name": "M3系列&T3&M3470系列用户手册.pdf",
+      "relative_path": "M3系列&T3&M3470系列用户手册.pdf",
+      "sha256": "033b83eade4b4c7e1014911654de0d5d18328b6dca6e232822e37938382e2787",
+      "byte_size": 9056933,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "6fe646e8-5492-5abd-962f-779ad0b607d5",
+      "name": "M7208W_Pro用户手册.pdf",
+      "relative_path": "M7208W_Pro用户手册.pdf",
+      "sha256": "e0cb648e8fe5b7f157a0e10c3b280cc9bb72a8d2033fb4ddce75364a8f935c6c",
+      "byte_size": 14228089,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "8325b2d4-9507-5a6e-b0b2-29dd4a182870",
+      "name": "M7268系列用户手册.pdf",
+      "relative_path": "M7268系列用户手册.pdf",
+      "sha256": "c48cb3c982ea4ab1ab012f98dfe8a37d62667c0e7383f0901b2bcea25abba32f",
+      "byte_size": 14324381,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "93c382d6-0c21-5bca-bd22-c097338033e2",
+      "name": "manual_cs_250-1187-E_GC251DNS_V0100.pdf",
+      "relative_path": "manual_cs_250-1187-E_GC251DNS_V0100.pdf",
+      "sha256": "e7221a02045b508d6be52c9b14186147f04e045813d4e28c1f73dc5fa175e665",
+      "byte_size": 4730048,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "17c63146-83a2-5233-a8d0-9840c81ff9bc",
+      "name": "p5123_e.pdf",
+      "relative_path": "p5123_e.pdf",
+      "sha256": "5a0dac1d40c85df02c63db2cad3785803c3259ce29e413beed4f50d094d625a4",
+      "byte_size": 136308,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "27fd5d50-1b00-5482-b69f-4210c46142d0",
+      "name": "Panda Pro系列打印机用户手册V1.04-20251029.pdf",
+      "relative_path": "Panda Pro系列打印机用户手册V1.04-20251029.pdf",
+      "sha256": "07139d6ba837ebfb9d20564ab4ea0e56f0be43eb7ca37afa98dcc298f4a42ef2",
+      "byte_size": 6165884,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "be3f8814-b8d4-5d1c-baf9-a8be44f1b11d",
+      "name": "Pantum P3030 User Guide zh_CN V1_2.pdf",
+      "relative_path": "Pantum P3030 User Guide zh_CN V1_2.pdf",
+      "sha256": "9f71edd6407c6ace2c0845545708d640ce9a88c68ea597d16c1fe26ac623ea58",
+      "byte_size": 7106266,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "dc2ad862-b942-56ed-b556-d45e5a2f5bc7",
+      "name": "PantumP3000userguideGDIzh_CNV1.9_1644314230264.pdf",
+      "relative_path": "PantumP3000userguideGDIzh_CNV1.9_1644314230264.pdf",
+      "sha256": "4d584e670d0dcba181e71823cccc63f3d3d4e71af82e611e5808aa9f405eb65c",
+      "byte_size": 12102813,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "2de088b7-2fc1-508d-8f04-50d59cc948de",
+      "name": "PantumP3500用户手册zh_CNV1.2_1644316283788.pdf",
+      "relative_path": "PantumP3500用户手册zh_CNV1.2_1644316283788.pdf",
+      "sha256": "c4c7b2a434f3f86c4988d3961ac7304970029e71b0201fb6c10ca722b63bce2b",
+      "byte_size": 25193199,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "49db21fa-a505-5d95-b83b-04ee7ffd1e1a",
+      "name": "r142-e08.pdf",
+      "relative_path": "r142-e08.pdf",
+      "sha256": "6e56eb351f707bb67a2795e82ededda22b48021d396ba9f061cf79cc37de8798",
+      "byte_size": 377592,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "6631b4e7-d61e-5687-99d0-f511f3070ff8",
+      "name": "UE4010100-115_EN.pdf",
+      "relative_path": "UE4010100-115_EN.pdf",
+      "sha256": "118bf055d5017cf6094616969a83a246605999677105f7e2d3c329f04b57a117",
+      "byte_size": 337828,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "313c9b4d-9f4e-5363-9123-a2b5c4fdb402",
+      "name": "Z26 MIC机型打印机用户手册（联想）ver02.30-20251029.pdf",
+      "relative_path": "Z26 MIC机型打印机用户手册（联想）ver02.30-20251029.pdf",
+      "sha256": "814f306045f3836b99537e56f82dab62762850ce5b9e2640b12abb39545b565c",
+      "byte_size": 5983063,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "e9851611-31cd-5733-b998-f9a54da634ab",
+      "name": "Z26通用机型打印机用户手册（至像）ver02.30-20251029.pdf",
+      "relative_path": "Z26通用机型打印机用户手册（至像）ver02.30-20251029.pdf",
+      "sha256": "3cc5fb1a18974a5a117515c2e4fa42fb3cc88e8896d7e656ebbb7f4f19a34f01",
+      "byte_size": 6444366,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "be33f395-f5f4-51d5-8e8c-11be381e8685",
+      "name": "Z2_Manuals_Win_20241011153854.pdf",
+      "relative_path": "Z2_Manuals_Win_20241011153854.pdf",
+      "sha256": "957e7d61551319f4ec95cd9b14d41e13a4555f1f18d390fad649c379afef60dc",
+      "byte_size": 6095312,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "3f24c971-94ca-5a97-a2ca-3589052ee36c",
+      "name": "Z35打印机用户手册（联想）V01.30-20251030.pdf",
+      "relative_path": "Z35打印机用户手册（联想）V01.30-20251030.pdf",
+      "sha256": "e974687d31c2a1b260e01a287537cac1ce1b0833b1d6d481ffb1de549b5e37be",
+      "byte_size": 11178412,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "f91dd529-546e-569d-8f20-5a5a052fbd1f",
+      "name": "万用表RS-12的使用.pdf",
+      "relative_path": "万用表RS-12的使用.pdf",
+      "sha256": "dc69d9431a6a6e747f3275bcc5ea51c74fc414d97cd7018711e4ce803d93357f",
+      "byte_size": 1422778,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "f2f43ccf-c50d-5f19-82f4-5c290fbc628d",
+      "name": "华为平板 C3 用户指南-(BZD-AL00&AL10&W00,EMUI10.1_01,ZH-CN).pdf",
+      "relative_path": "华为平板 C3 用户指南-(BZD-AL00&AL10&W00,EMUI10.1_01,ZH-CN).pdf",
+      "sha256": "8f631626a466b5f58364de35ce770bcf842da3eddb1af980a7b3ef05de0d8140",
+      "byte_size": 2346232,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "285f2002-ba22-51c9-999f-2a00c4f5f70d",
+      "name": "华为平板 C5 平板用户指南-(BZT3-W59&W69,EMUI10.1_01,ZH-CN).pdf",
+      "relative_path": "华为平板 C5 平板用户指南-(BZT3-W59&W69,EMUI10.1_01,ZH-CN).pdf",
+      "sha256": "3ebd758277694eb9a7fa29dc78ffeaf489a3c45d93132d988071c034b7d74d44",
+      "byte_size": 2701234,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "8a224dc7-0789-5e36-a5b0-3405ffbd3979",
+      "name": "华为平板 C5e 用户指南-(BZI-W00&AL00,EMUI10.1_01,zh-cn).pdf",
+      "relative_path": "华为平板 C5e 用户指南-(BZI-W00&AL00,EMUI10.1_01,zh-cn).pdf",
+      "sha256": "c24394c42313a0ce2fbf5830fc4fd0925763322518c87fab9add4090140101cb",
+      "byte_size": 2288414,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "78cbc912-7324-5d5e-9805-d61cdb7e0a6d",
+      "name": "华为平板 C7 用户指南-(DBY-W09,HarmonyOS 2_01,ZH-CN).pdf",
+      "relative_path": "华为平板 C7 用户指南-(DBY-W09,HarmonyOS 2_01,ZH-CN).pdf",
+      "sha256": "29d3023fc8fd6cd9a215cc2df5d880875bc94cc0664a26f87cbdb996fcff9087",
+      "byte_size": 3190280,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "a5e4d411-b775-5ce0-9ecc-a4d8174a08b1",
+      "name": "华为擎云 C5 (第4代) 用户指南-(BYD5-W10&AL10,HarmonyOS 4.3_01,zh-cn).pdf",
+      "relative_path": "华为擎云 C5 (第4代) 用户指南-(BYD5-W10&AL10,HarmonyOS 4.3_01,zh-cn).pdf",
+      "sha256": "e8c1405874a18c46d2294b6e4597068685c34b4aee7ea6cbc66ca6336073022a",
+      "byte_size": 9976634,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "1b7d5a6c-e18d-5a73-bef2-33cf62c20e31",
+      "name": "华为擎云 C5e (第2代) 用户指南-(BZF5-W00,HarmonyOS3.0_01,zh-cn).pdf",
+      "relative_path": "华为擎云 C5e (第2代) 用户指南-(BZF5-W00,HarmonyOS3.0_01,zh-cn).pdf",
+      "sha256": "66a7e024669edadc25a28976c7e198c9fc33ce5ed2aa7d6a6505233b06fe017a",
+      "byte_size": 7250649,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "735fabd7-853c-581d-8086-332fc75845f9",
+      "name": "华为擎云 G540 用户指南-(YTFZ,Windows11_03,zh-cn).pdf",
+      "relative_path": "华为擎云 G540 用户指南-(YTFZ,Windows11_03,zh-cn).pdf",
+      "sha256": "977b5522d45fb1d3dfe8ac330c37841ad2751ffdfcbdaa64847ca753e78eff83",
+      "byte_size": 1210281,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "dcea724d-1eff-56a6-871d-999be4919fb6",
+      "name": "华为擎云 G740 用户指南-(KLVG-16Z,Windows11_02,zh-cn).pdf",
+      "relative_path": "华为擎云 G740 用户指南-(KLVG-16Z,Windows11_02,zh-cn).pdf",
+      "sha256": "596827d04af158f56d7304db2ea5fd7162ecf1e3fa6ecd574eec62bd644f808f",
+      "byte_size": 1202237,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "4ea1ae0e-739c-50a2-9821-ef41d7234d39",
+      "name": "华为擎云 HM740 用户指南-(HM740-001&031,HarmonyOS 6.0_01,zh-cn).pdf",
+      "relative_path": "华为擎云 HM740 用户指南-(HM740-001&031,HarmonyOS 6.0_01,zh-cn).pdf",
+      "sha256": "cccd36a71b2c0f7f73b6283aa73930ca329c392e189bb023d42172e6ed11dcd9",
+      "byte_size": 10815420,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "73c23669-e146-54c8-9d39-e50549931724",
+      "name": "华为擎云 HM940 用户指南-(HAD-W72-001&W72-006,HarmonyOS 5.0_02,ch-zn).pdf",
+      "relative_path": "华为擎云 HM940 用户指南-(HAD-W72-001&W72-006,HarmonyOS 5.0_02,ch-zn).pdf",
+      "sha256": "37e763e5d45830ac15a3a8011aca8cc057d7a7a113119bdd44cb3253aaffc3f6",
+      "byte_size": 6052224,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "75a3455d-6c16-500e-8ac0-3e27f26a03b9",
+      "name": "华为擎云 L420x 用户指南-(华为擎云 L420x-Axxx,UOS&KOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云 L420x 用户指南-(华为擎云 L420x-Axxx,UOS&KOS_01,zh-cn).pdf",
+      "sha256": "a8b22e32c349598723ebec4b3e016dd8a115c996729af309f724a526828fc3c1",
+      "byte_size": 1238205,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "90c3076f-241a-5809-b5ba-18dba7b61c23",
+      "name": "华为擎云 L540 用户指南-(KLVV,UOS&KOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云 L540 用户指南-(KLVV,UOS&KOS_01,zh-cn).pdf",
+      "sha256": "92291155a5e07270a16ac97f24d73e7825f2b1ef03852fcd0a134b7bf95fe489",
+      "byte_size": 1287712,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "3a47f007-e330-5fe0-b9e8-c9caa02a3ac7",
+      "name": "华为擎云 L540x 用户指南-(华为擎云 L540x-Axxx,UOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云 L540x 用户指南-(华为擎云 L540x-Axxx,UOS_01,zh-cn).pdf",
+      "sha256": "1c108132e5722dc96144cf5cbc8d7a699eff9cb1956ee0feaf15093cba148598",
+      "byte_size": 1529745,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "ebf7de3e-e4a3-56ec-99bc-0835137bdf72",
+      "name": "华为擎云 M272Q 用户指南-(XSN-27QBZ,02,zh-cn).pdf",
+      "relative_path": "华为擎云 M272Q 用户指南-(XSN-27QBZ,02,zh-cn).pdf",
+      "sha256": "9a7a33af44542b784a625b001f4fd0b80134df8992bfa5b17fe4a1a970312f40",
+      "byte_size": 1140761,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "74c57264-2d1e-57c5-a64c-8653a548cb29",
+      "name": "华为擎云 P5 激光多功能一体机 CV81Z-LDM 用户指南-(CV81Z-LDM,06,zh-cn).pdf",
+      "relative_path": "华为擎云 P5 激光多功能一体机 CV81Z-LDM 用户指南-(CV81Z-LDM,06,zh-cn).pdf",
+      "sha256": "9461e82fac7d4b35e27d11e1b78f5c60bdf9346a9974f89636eff02d885d509f",
+      "byte_size": 5977135,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "626d0b96-ec44-5173-bc41-41644d8ad552",
+      "name": "华为擎云 S520 Gen2 用户指南-(YTGZ,Windows11_03,zh-cn).pdf",
+      "relative_path": "华为擎云 S520 Gen2 用户指南-(YTGZ,Windows11_03,zh-cn).pdf",
+      "sha256": "977b5522d45fb1d3dfe8ac330c37841ad2751ffdfcbdaa64847ca753e78eff83",
+      "byte_size": 1210281,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "16b578f1-7d84-565d-b9aa-fbcc712401b7",
+      "name": "华为擎云 S540 用户指南-(YTFZ,Windows11_03,zh-cn).pdf",
+      "relative_path": "华为擎云 S540 用户指南-(YTFZ,Windows11_03,zh-cn).pdf",
+      "sha256": "977b5522d45fb1d3dfe8ac330c37841ad2751ffdfcbdaa64847ca753e78eff83",
+      "byte_size": 1210281,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "2678da45-12f2-52b1-9b86-57f00387b44b",
+      "name": "华为擎云 W515y 用户指南-(PGUY,KOS&UOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云 W515y 用户指南-(PGUY,KOS&UOS_01,zh-cn).pdf",
+      "sha256": "1af924abf91fa84701dcad3a2119fe7ef8766f74d5e3d7027465f33e45adbd94",
+      "byte_size": 1363122,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "9339f923-d1fc-5c3c-ac27-46fe2c23cf0e",
+      "name": "华为擎云 W525 用户指南-(PGUW-WBX0,KOS&UOS_02,zh-cn).pdf",
+      "relative_path": "华为擎云 W525 用户指南-(PGUW-WBX0,KOS&UOS_02,zh-cn).pdf",
+      "sha256": "032a1bb1c759d2b752a6f304ec7ddd4a5a9b178ffdea964b0523ef37aea299f9",
+      "byte_size": 942351,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "2dbca673-c464-59fb-bb15-cb739cd7ee53",
+      "name": "华为擎云 W585y 用户指南-(PGUY,KOS&UOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云 W585y 用户指南-(PGUY,KOS&UOS_01,zh-cn).pdf",
+      "sha256": "1af924abf91fa84701dcad3a2119fe7ef8766f74d5e3d7027465f33e45adbd94",
+      "byte_size": 1363122,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "48d4a4de-7b92-5af3-afce-fdf6b119640b",
+      "name": "华为擎云B530 用户指南-(PUCZ,Windows11_03,zh-cn).pdf",
+      "relative_path": "华为擎云B530 用户指南-(PUCZ,Windows11_03,zh-cn).pdf",
+      "sha256": "dc36067f4c14aa004bd251b6aa8f7205b25c12cd1b6beb75319ec31cb0f37da0",
+      "byte_size": 686367,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "a5867478-dbac-5f2d-856b-3cb3b86a7041",
+      "name": "华为擎云B730 用户指南-(PUCZ,Windows11_03,zh-cn).pdf",
+      "relative_path": "华为擎云B730 用户指南-(PUCZ,Windows11_03,zh-cn).pdf",
+      "sha256": "dc36067f4c14aa004bd251b6aa8f7205b25c12cd1b6beb75319ec31cb0f37da0",
+      "byte_size": 686367,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "3a9ef4e4-bc07-5ff4-a930-4a3d16a68694",
+      "name": "华为擎云L410 用户手册-(KelvinU,01,zh-cn).pdf",
+      "relative_path": "华为擎云L410 用户手册-(KelvinU,01,zh-cn).pdf",
+      "sha256": "4d5ba96f9cb7c34dc9d3a1fc087aebdda0d9366d4595a79c69416393c67e0d08",
+      "byte_size": 1264175,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "cda1334e-295e-512c-b5ff-93a67dad1ac1",
+      "name": "华为擎云L420 用户手册-(KelvinV,01,zh-cn).pdf",
+      "relative_path": "华为擎云L420 用户手册-(KelvinV,01,zh-cn).pdf",
+      "sha256": "92291155a5e07270a16ac97f24d73e7825f2b1ef03852fcd0a134b7bf95fe489",
+      "byte_size": 1287712,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "1f15ecb0-fcc7-50d0-a2e1-e95ecb767c99",
+      "name": "华为擎云W515 用户指南-(PanguV,KOS_05,zh-cn).pdf",
+      "relative_path": "华为擎云W515 用户指南-(PanguV,KOS_05,zh-cn).pdf",
+      "sha256": "04d2fd2873b436df8ae81c2831babaa707ec0ac6942320d1e86fe2ec9af2e88f",
+      "byte_size": 1529658,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "d9a3dc1e-a17a-53d6-b76f-a4d9999c984f",
+      "name": "华为擎云W515X 用户指南-(PGUX,KOS&UOS_02,zh-cn).pdf",
+      "relative_path": "华为擎云W515X 用户指南-(PGUX,KOS&UOS_02,zh-cn).pdf",
+      "sha256": "9974798606e97e1d0dbac5269389c51a2e2e34fe9de4f9e37f319cb94c6a88aa",
+      "byte_size": 1488677,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "c041c60c-55e3-5015-9939-2c5612935672",
+      "name": "华为擎云W585 用户指南-(PGUV,KOS&UOS_01,zh-cn).pdf",
+      "relative_path": "华为擎云W585 用户指南-(PGUV,KOS&UOS_01,zh-cn).pdf",
+      "sha256": "7e4978cb08ddd400b794300eaefbc74388730ea34e806496397dc6c3abc0eba2",
+      "byte_size": 916784,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "c6a75da8-0cbf-539d-bff4-33e3257ce7c4",
+      "name": "华为擎云W585X 用户指南-(PGUX,KOS&UOS_02,zh-cn).pdf",
+      "relative_path": "华为擎云W585X 用户指南-(PGUX,KOS&UOS_02,zh-cn).pdf",
+      "sha256": "9974798606e97e1d0dbac5269389c51a2e2e34fe9de4f9e37f319cb94c6a88aa",
+      "byte_size": 1488677,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "04fb31c8-eab3-5806-ae9b-a0565189bbd0",
+      "name": "华为显示器 B3-211H 用户指南-(NSN-21BZ,02,zh-cn).pdf",
+      "relative_path": "华为显示器 B3-211H 用户指南-(NSN-21BZ,02,zh-cn).pdf",
+      "sha256": "8b8500aec3d688c6035ef4a88b49dfbcdf619f56f1c22a070fb4ddba178f7d98",
+      "byte_size": 742012,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "99dfa168-5b2f-5de6-8aa6-ae954a582b81",
+      "name": "华为显示器 B3-241H 用户指南-(SSN-24BZ,VGA,04,zh-cn).pdf",
+      "relative_path": "华为显示器 B3-241H 用户指南-(SSN-24BZ,VGA,04,zh-cn).pdf",
+      "sha256": "1fc0a37ccc8df92abab480937f4798649068c0d63fee8a5a7254acb8429e4ec9",
+      "byte_size": 1852329,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "11ee7a80-d9f0-5ef4-9008-60c4dba6b07e",
+      "name": "华为显示器 B3-242H 用户指南-(SSN-24BZ,VGA,04,zh-cn).pdf",
+      "relative_path": "华为显示器 B3-242H 用户指南-(SSN-24BZ,VGA,04,zh-cn).pdf",
+      "sha256": "1fc0a37ccc8df92abab480937f4798649068c0d63fee8a5a7254acb8429e4ec9",
+      "byte_size": 1852329,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "7b6da93d-a7f3-5262-a6c8-4138a027c356",
+      "name": "华为显示器 B3-243H 用户指南-(SSNB-24BZ,01,zh-cn).pdf",
+      "relative_path": "华为显示器 B3-243H 用户指南-(SSNB-24BZ,01,zh-cn).pdf",
+      "sha256": "03b729450efefbf4a5398dd4c4ba2a1e610af51dc0bd40297af562ad6c48afef",
+      "byte_size": 1370848,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "324fd285-cf71-5462-81e8-876f40480b65",
+      "name": "华为显示器 B3-271Q 用户指南-(XWU-CBA,02,zh-cn).pdf",
+      "relative_path": "华为显示器 B3-271Q 用户指南-(XWU-CBA,02,zh-cn).pdf",
+      "sha256": "38425bb54e6056265c9046fc3df9cb88ee59e0618d181d7a2125c8c7d729de0b",
+      "byte_size": 3383330,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "99601096-eeb1-561d-89a7-97d573213a8e",
+      "name": "华为显示器 B5-341W 用户指南-(ZQE-CBA,04,zh-cn).pdf",
+      "relative_path": "华为显示器 B5-341W 用户指南-(ZQE-CBA,04,zh-cn).pdf",
+      "sha256": "b599069adb3003fc70e37e602f36c9d3636a7eecff70b33ddff613e3f3876651",
+      "byte_size": 2299337,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "c3b507b1-0153-5a5d-91a4-8ec1692d1c7b",
+      "name": "华为显示器 B7-281U 用户指南-(HSN-CAA,04,zh-cn).pdf",
+      "relative_path": "华为显示器 B7-281U 用户指南-(HSN-CAA,04,zh-cn).pdf",
+      "sha256": "2e22a5f8f0e5b9f563dc603de09bb17c4aeb997e22bca9d98dfa8ef655e34ea1",
+      "byte_size": 2168935,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "44245c50-0c2f-5415-86c4-6e645d3b7a72",
+      "name": "联想海豚用户手册.pdf",
+      "relative_path": "联想海豚用户手册.pdf",
+      "sha256": "d0a8922006e8ea42eb73d39c7cad3efdceae49bad1f3f0afb036e8b8a661b8c6",
+      "byte_size": 24489615,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "55d65543-e984-5760-95d8-9f4b22767c0f",
+      "name": "联想至像大象系列打印机用户手册V1.02-20250217.pdf",
+      "relative_path": "联想至像大象系列打印机用户手册V1.02-20250217.pdf",
+      "sha256": "100392167b069cf01aacca1bea5b08127f90ff47d77e8b244677597d04cf5a3a",
+      "byte_size": 8847731,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "7691972b-2a8c-52f8-84e2-288833f61171",
+      "name": "联想鲸鱼系列用户手册.pdf",
+      "relative_path": "联想鲸鱼系列用户手册.pdf",
+      "sha256": "fc39f80101d093e21e7a908b7d653a903c9f4b9e25eb0a379497a7c8853c9900",
+      "byte_size": 18740208,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    },
+    {
+      "file_id": "48335c3f-22d7-58b8-ab72-312bb3b53fe7",
+      "name": "迅饶网关与小米产品通讯配置说明.pdf",
+      "relative_path": "迅饶网关与小米产品通讯配置说明.pdf",
+      "sha256": "9eda0af991762156befd5b6ac651730835c7b8732b0c48d8761574406298ebb9",
+      "byte_size": 1379631,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {
+        "mineru": false,
+        "embedding": false,
+        "generation": false
+      }
+    }
+  ]
+}

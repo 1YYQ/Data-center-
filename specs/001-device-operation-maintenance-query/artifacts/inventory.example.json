@@ -1,0 +1,22 @@
+{
+  "schema_version": "device-inventory.v1",
+  "source_root": "doc/example/doc",
+  "generated_at": "2026-11-15T00:00:00Z",
+  "files": [
+    {
+      "file_id": "example-demo-manual",
+      "name": "demo-manual.pdf",
+      "relative_path": "demo-manual.pdf",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "byte_size": 0,
+      "mime_type": "application/pdf",
+      "title": null,
+      "models": [],
+      "revision_label": null,
+      "applicability_status": "pending",
+      "content_review_status": "unreviewed",
+      "publish_status": "draft",
+      "external_services": {"mineru": false, "embedding": false, "generation": false}
+    }
+  ]
+}

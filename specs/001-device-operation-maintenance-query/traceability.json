@@ -1,0 +1,1929 @@
+{
+  "schema_version": "1.0",
+  "snapshot_date": "2026-11-18",
+  "purpose": "首期FR/SC—既有任务—契约—验收断言—实际证据/缺口的追踪；不改变任务勾选或产生真实准入",
+  "authority": {
+    "requirements": "specs/001-device-operation-maintenance-query/spec.md",
+    "business_rules": "doc/requirements/SPEC.md",
+    "task_status_and_dependencies": "specs/001-device-operation-maintenance-query/tasks.md",
+    "project_status": "doc/planning/STATUS.md",
+    "gates": "specs/001-device-operation-maintenance-query/baseline.md",
+    "evidence_inventory": "outputs/service-use/2026-11-18/evidence-inventory.json",
+    "prior_candidate": "outputs/development-baseline/2026-11-18/final/candidate.json"
+  },
+  "interpretation": [
+    "evidence_ids表示关联的证据/缺口记录，不表示对应FR、SC或任务全部通过。",
+    "EV-01为静态格式，EV-02为真实验收/指标未具备，EV-18含本地反馈局部证据；均不能据编号推断完整功能通过。",
+    "原404及16客户端/两案进程记录保留原身份；本地业务用途增量和本轮合并回归单独绑定outputs/service-use候选，不与历史数字相加。",
+    "所有路径相对仓库根目录；本文件是映射源，traceability.md为其阅读投影。任务依赖及当前状态仅在tasks.md维护。",
+    "真实签认、人工参考答案、服务准入和业务指标仍为TODO；场景映射不等于已执行真实A–F。",
+    "evidence_catalog仅保存已在阅读投影公开的非敏感历史索引；原运行详情仍在受控忽略位置。生成不读取outputs；检查不核准历史证据继续适用。"
+  ],
+  "scenarios": [
+    {
+      "id": "A",
+      "label": "正常查询及持续对话/范围/查阅扩展",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 A：正常查询",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "B",
+      "label": "资料/型号不足及参考开放、反馈扩展",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 B：资料或型号不足",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "C",
+      "label": "版本冲突",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 C：版本冲突",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "D",
+      "label": "权限、单条回答分享、撤权及反馈隔离",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 D：权限和分享",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "E",
+      "label": "解析质量、警告与脚注",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 E：解析质量",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "F",
+      "label": "服务异常与恢复",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "场景 F：服务异常",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "FEEDBACK",
+      "label": "反馈回访、更新后重新查询及旧答案保留",
+      "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+      "heading": "反馈回访与更新后重新查询补充（2026-11-17，未执行）",
+      "scope": "real_acceptance_not_run"
+    },
+    {
+      "id": "LOCAL-CREATE",
+      "label": "本地创建、生命周期及恢复",
+      "path": "doc/development/资料创建与生命周期验证.md",
+      "scope": "synthetic_local_only"
+    },
+    {
+      "id": "LOCAL-SERVICE",
+      "label": "本地服务配置/准入/HTTP/TLS/未知调用",
+      "path": "doc/development/服务适配与本地准入.md",
+      "scope": "synthetic_local_only"
+    },
+    {
+      "id": "LOCAL-QUERY",
+      "label": "本地SDK/Worker/授权查询与回答",
+      "path": "doc/development/本地查询执行与验证.md",
+      "scope": "synthetic_local_only"
+    },
+    {
+      "id": "LOCAL-MIGRATION",
+      "label": "隔离目标、迁移拒绝与提交未知",
+      "path": "doc/development/安全迁移与事故核查.md",
+      "scope": "synthetic_local_only"
+    },
+    {
+      "id": "LOCAL-QUEUE",
+      "label": "本地队列、PG步骤及恢复",
+      "path": "doc/development/本地队列接入.md",
+      "scope": "synthetic_local_only"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "FR-001",
+      "label": "89份清单、来源、身份与访问范围",
+      "task_ids": [
+        "T001",
+        "T002",
+        "T017",
+        "T018",
+        "T028",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-006"
+      ],
+      "api_sections": [
+        "5",
+        "17.1",
+        "20"
+      ],
+      "database_sections": [
+        "5",
+        "17.1",
+        "20"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "C",
+        "LOCAL-CREATE"
+      ],
+      "evidence_ids": [
+        "EV-01",
+        "EV-02",
+        "EV-06"
+      ],
+      "assertions": [
+        "文件身份、来源和版本可回溯；同hash不自动合并来源或权限",
+        "正式查询仅使用满足当前资格的资料子集"
+      ],
+      "remaining": [
+        "89份实际来源/版本/访问依据及首批适用确认",
+        "候选格式和3原件身份不能替代业务签认"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "label": "平台账号、会话及停用恢复",
+      "task_ids": [
+        "T004",
+        "T005",
+        "T006",
+        "T023",
+        "T027",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-003",
+        "SC-005",
+        "SC-007"
+      ],
+      "api_sections": [
+        "4",
+        "19.2"
+      ],
+      "database_sections": [
+        "4",
+        "19.1"
+      ],
+      "scenario_ids": [
+        "D",
+        "F",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-04",
+        "EV-09"
+      ],
+      "assertions": [
+        "身份来自服务端会话；停用/登出/过期阻断相应访问",
+        "初始化、重置与角色操作保留依据和会话失效记录"
+      ],
+      "remaining": [
+        "真实任命、账号和角色依据",
+        "完整账号/会话/角色期限与管理范围矩阵"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "label": "完整授权元组与不跨记录拼接",
+      "task_ids": [
+        "T004",
+        "T007",
+        "T014",
+        "T023",
+        "T025",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-002",
+        "SC-004"
+      ],
+      "api_sections": [
+        "3",
+        "4",
+        "17.1",
+        "19.3",
+        "22"
+      ],
+      "database_sections": [
+        "4.2",
+        "19.1"
+      ],
+      "scenario_ids": [
+        "D",
+        "LOCAL-CREATE",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-04",
+        "EV-07",
+        "EV-10"
+      ],
+      "assertions": [
+        "单条当前有效授权及其真实批准依据覆盖完整请求元组",
+        "撤销/停用与提交竞争按事务先后判定；分享不补资料权限"
+      ],
+      "remaining": [
+        "真实企业权限/任命及完整管理矩阵",
+        "尚未实现的真实grant撤回HTTP不得用直接测试行更新替代验收"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "label": "适用、核验、发布三态与选用",
+      "task_ids": [
+        "T018",
+        "T020",
+        "T021",
+        "T022",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-004"
+      ],
+      "api_sections": [
+        "5",
+        "17.2",
+        "17.3",
+        "17.6"
+      ],
+      "database_sections": [
+        "5",
+        "17.2",
+        "17.3",
+        "17.6"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "C",
+        "E"
+      ],
+      "evidence_ids": [
+        "EV-05",
+        "EV-07"
+      ],
+      "assertions": [
+        "正式资格由当前适用确认、核验集、精确解析/切分、发布及活动索引共同决定",
+        "参考开放不改变正式资格；未知生效日保持未知"
+      ],
+      "remaining": [
+        "真实适用/专业确认和冲突裁决",
+        "在真实样本上核对完整状态组合"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "label": "上传、版本幂等与中断恢复",
+      "task_ids": [
+        "T004",
+        "T008",
+        "T010",
+        "T017",
+        "T018",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-003",
+        "SC-004"
+      ],
+      "api_sections": [
+        "2.2",
+        "5",
+        "20",
+        "21"
+      ],
+      "database_sections": [
+        "5",
+        "8.4",
+        "20"
+      ],
+      "scenario_ids": [
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-MIGRATION"
+      ],
+      "evidence_ids": [
+        "EV-06",
+        "EV-07",
+        "EV-13"
+      ],
+      "assertions": [
+        "文件/来源校验、业务、回执和审计在对应提交边界一致",
+        "中断后同键核对不重复可见版本，拒绝后不能暗中留业务写入"
+      ],
+      "remaining": [
+        "临时文件保留/最终清理策略及完整历史迁移边界",
+        "获准真实上传样本和规模验证"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "label": "复杂PDF结构、定位与不可信内容",
+      "task_ids": [
+        "T019",
+        "T020",
+        "T028",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-006"
+      ],
+      "api_sections": [
+        "6",
+        "17.2",
+        "19.4"
+      ],
+      "database_sections": [
+        "6",
+        "17.2"
+      ],
+      "scenario_ids": [
+        "E",
+        "LOCAL-SERVICE"
+      ],
+      "evidence_ids": [
+        "EV-05",
+        "EV-14",
+        "EV-17"
+      ],
+      "assertions": [
+        "解析保留实际页/章节、关键警告、图注及表格脚注，歧义待核验",
+        "文档内容不成为系统指令；畸形ZIP/未知输出格式拒绝"
+      ],
+      "remaining": [
+        "实际供应商准入/格式兼容及获准文字、图文、扫描PDF的原页人工核验",
+        "原ZIP留存/清理与所有崩溃窗口；合成业务接线不证明真实解析质量"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "label": "当前授权范围、型号、版本和索引检索",
+      "task_ids": [
+        "T011",
+        "T012",
+        "T013",
+        "T019",
+        "T021",
+        "T031",
+        "T032",
+        "T033"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-004"
+      ],
+      "api_sections": [
+        "7",
+        "8",
+        "13.1",
+        "18",
+        "18.5"
+      ],
+      "database_sections": [
+        "7",
+        "8",
+        "13",
+        "18"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-05",
+        "EV-08",
+        "EV-09",
+        "EV-11"
+      ],
+      "assertions": [
+        "默认授权范围或手动缩小范围均不扩大权限",
+        "当前适用/已发布选用版本、活动代际及精确型号过滤，证据不足不猜测",
+        "answer按受限候选和完整支持组交付；模型自由改写不能自行放行为formal"
+      ],
+      "remaining": [
+        "新服务修订与解析/嵌入/Pi选用、逐用途许可的业务接线",
+        "pgvector不因合成向量检查而成为默认语义检索；真实召回与引用质量",
+        "PDF child到Pi组织答案的实际实现、逐声明人工参考与真实模型准入"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "label": "任务、步骤、等待输入与恢复",
+      "task_ids": [
+        "T008",
+        "T011",
+        "T013",
+        "T016",
+        "T031",
+        "T032"
+      ],
+      "criteria_ids": [
+        "SC-003",
+        "SC-005"
+      ],
+      "api_sections": [
+        "8",
+        "9",
+        "18",
+        "21"
+      ],
+      "database_sections": [
+        "8",
+        "13",
+        "18"
+      ],
+      "scenario_ids": [
+        "B",
+        "F",
+        "LOCAL-QUEUE",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-08",
+        "EV-12",
+        "EV-15",
+        "EV-17"
+      ],
+      "assertions": [
+        "任务与条件/来源/回执绑定，刷新和缺型号补充恢复原任务",
+        "租约/attempt与取消/撤权生效，未知调用不盲目重发"
+      ],
+      "remaining": [
+        "未覆盖的关闭/续租、任意多资源与更长故障窗口",
+        "真实环境任务及当前许可失效全过程验证"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "label": "单条回答分享与接收者再次鉴权",
+      "task_ids": [
+        "T007",
+        "T014",
+        "T031",
+        "T032"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-004",
+        "SC-005"
+      ],
+      "api_sections": [
+        "9",
+        "13.2",
+        "18.4"
+      ],
+      "database_sections": [
+        "8.3",
+        "13.1"
+      ],
+      "scenario_ids": [
+        "A",
+        "D",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-08",
+        "EV-10"
+      ],
+      "assertions": [
+        "分享绑定确切回答快照及条件/版本/出处",
+        "接收者当前资料/操作授权、期限和撤销再次校验，不分享整段对话"
+      ],
+      "remaining": [
+        "真实账号/资料授权及分享过期/撤权矩阵",
+        "跨版本历史引用的业务可理解性核对"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "label": "审计与日志脱敏",
+      "task_ids": [
+        "T004",
+        "T009",
+        "T023",
+        "T026",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-004",
+        "SC-007"
+      ],
+      "api_sections": [
+        "4",
+        "17",
+        "19.5",
+        "20",
+        "22"
+      ],
+      "database_sections": [
+        "4",
+        "8",
+        "19.3",
+        "20"
+      ],
+      "scenario_ids": [
+        "D",
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-SERVICE"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-04",
+        "EV-06",
+        "EV-07",
+        "EV-14"
+      ],
+      "assertions": [
+        "关键操作、拒绝/恢复与业务提交具可归属审计",
+        "运维不返回正文/凭据/签名URL，人工provider记录不冒充可信调用或账单"
+      ],
+      "remaining": [
+        "完整审计白名单、运维读写分离及真实主体归属",
+        "企业日志留存/访问策略与全面敏感字段核对"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "label": "留存、逻辑删除、失效与恢复",
+      "task_ids": [
+        "T004",
+        "T010",
+        "T021",
+        "T025",
+        "T026",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-003",
+        "SC-004",
+        "SC-007"
+      ],
+      "api_sections": [
+        "19.6",
+        "20",
+        "21"
+      ],
+      "database_sections": [
+        "11",
+        "19.4",
+        "19.5",
+        "20"
+      ],
+      "scenario_ids": [
+        "D",
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-MIGRATION"
+      ],
+      "evidence_ids": [
+        "EV-07",
+        "EV-10",
+        "EV-12",
+        "EV-13"
+      ],
+      "assertions": [
+        "撤权/撤回/删除影响索引、缓存、原文、结果及后续外发",
+        "恢复必须追平当前治理与副作用账本，不能复活旧权限"
+      ],
+      "remaining": [
+        "保留期限、最终清理、恢复和一致备份真实演练",
+        "默认SQLite历史影响UNKNOWN；本地保护不等于可恢复该库"
+      ]
+    },
+    {
+      "id": "FR-012",
+      "label": "逐服务许可、预算、用途和协议隔离",
+      "task_ids": [
+        "T003",
+        "T009",
+        "T019",
+        "T024",
+        "T027",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-003",
+        "SC-006",
+        "SC-007"
+      ],
+      "api_sections": [
+        "18.3",
+        "19.4"
+      ],
+      "database_sections": [
+        "18",
+        "19.2"
+      ],
+      "scenario_ids": [
+        "F",
+        "LOCAL-SERVICE"
+      ],
+      "evidence_ids": [
+        "EV-01",
+        "EV-14",
+        "EV-15",
+        "EV-16",
+        "EV-17"
+      ],
+      "assertions": [
+        "配置/代码/模型/凭据/网络/CA和用途一致，派发前落账、当前许可检查",
+        "禁用/撤销阻断未发送请求，未知用量/费用保持未知，恢复不自动换供应商"
+      ],
+      "remaining": [
+        "企业secret与真实逐用途数据/账号/费用/留存准入、许可续期及结算/健康",
+        "本地选用、精确证明和未知账本不产生真实服务许可"
+      ]
+    },
+    {
+      "id": "FR-013",
+      "label": "三角色桌面网页与可理解异常",
+      "task_ids": [
+        "T015",
+        "T016",
+        "T022",
+        "T027",
+        "T031",
+        "T033",
+        "T034"
+      ],
+      "criteria_ids": [
+        "SC-002",
+        "SC-003",
+        "SC-005"
+      ],
+      "api_sections": [
+        "13",
+        "15",
+        "17",
+        "19",
+        "20"
+      ],
+      "database_sections": [
+        "13",
+        "15",
+        "17",
+        "19",
+        "20"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "D",
+        "F",
+        "FEEDBACK"
+      ],
+      "evidence_ids": [
+        "EV-04",
+        "EV-05",
+        "EV-07",
+        "EV-09",
+        "EV-16",
+        "EV-18"
+      ],
+      "assertions": [
+        "当前角色只见允许的动作/正文，失败可理解且未知操作恢复原回执",
+        "查询、维护、审批与服务配置的本地入口实际可操作，明确桌面支持范围"
+      ],
+      "remaining": [
+        "完整首期管理职责和FR-017两端交互",
+        "真实使用者可用性及企业浏览器/桌面视口矩阵"
+      ]
+    },
+    {
+      "id": "FR-014",
+      "label": "人工黄金样本与业务指标",
+      "task_ids": [
+        "T001",
+        "T002",
+        "T028",
+        "T029",
+        "T030",
+        "T031"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-006",
+        "SC-007"
+      ],
+      "api_sections": [
+        "12"
+      ],
+      "database_sections": [
+        "12"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "FEEDBACK"
+      ],
+      "evidence_ids": [
+        "EV-01",
+        "EV-02"
+      ],
+      "assertions": [
+        "参考答案和关键事实有人工/业务复核、原文位置与负面案例",
+        "指标定义样本/分母/方法后记录真实基线，阈值经确认才判达标"
+      ],
+      "remaining": [
+        "真实签认、适用确认、人工答案和阈值均TODO",
+        "没有真实A–F运行或业务指标通过证据"
+      ]
+    },
+    {
+      "id": "FR-015",
+      "label": "持续对话、条件与历史回答",
+      "task_ids": [
+        "T011",
+        "T015",
+        "T016",
+        "T031",
+        "T032"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-003",
+        "SC-005"
+      ],
+      "api_sections": [
+        "13.1",
+        "13.2",
+        "18.1"
+      ],
+      "database_sections": [
+        "13",
+        "18"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "D",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-08",
+        "EV-09",
+        "EV-10"
+      ],
+      "assertions": [
+        "已确认型号/条件随相应对话/任务修订持久化，缺项恢复不改写旧回答",
+        "新建/恢复对话和历史上下文读取重新鉴权，单条分享不暴露其他消息"
+      ],
+      "remaining": [
+        "完整多轮/新建/历史访问与任意修订组合",
+        "真实用户确认交互和当前权限下的模型上下文核对"
+      ]
+    },
+    {
+      "id": "FR-016",
+      "label": "授权手册查阅与精确版本参考开放",
+      "task_ids": [
+        "T007",
+        "T013",
+        "T015",
+        "T018",
+        "T021",
+        "T031",
+        "T033"
+      ],
+      "criteria_ids": [
+        "SC-001",
+        "SC-002",
+        "SC-004",
+        "SC-005"
+      ],
+      "api_sections": [
+        "13.1",
+        "17.6",
+        "20"
+      ],
+      "database_sections": [
+        "13.2",
+        "17.6",
+        "20"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "D",
+        "LOCAL-QUERY"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-05",
+        "EV-07",
+        "EV-09"
+      ],
+      "assertions": [
+        "按型号/文件名在当前授权范围查阅并打开对应版本原文",
+        "未发布草稿默认隔离；DM显式开放的精确版本仅供当前DR人工参考"
+      ],
+      "remaining": [
+        "授权跨库/型号别名/历史与参考状态完整矩阵",
+        "真实手册版本、出处和员工可理解性验收"
+      ]
+    },
+    {
+      "id": "FR-017",
+      "label": "资料反馈、受理回访及更新后重新查询",
+      "task_ids": [
+        "T015",
+        "T016",
+        "T022",
+        "T031",
+        "T034"
+      ],
+      "criteria_ids": [
+        "SC-002",
+        "SC-004",
+        "SC-005"
+      ],
+      "api_sections": [
+        "13.4",
+        "17.4"
+      ],
+      "database_sections": [
+        "13.3",
+        "17.4"
+      ],
+      "scenario_ids": [
+        "B",
+        "D",
+        "FEEDBACK"
+      ],
+      "evidence_ids": [
+        "EV-18",
+        "EV-02"
+      ],
+      "assertions": [
+        "对话/手册原入口提交并回访，附带内容按当前权限最小化",
+        "受理不授予整段对话/资料权限；答复不替代核验/确认/发布",
+        "可用更新后重新查询产生新回答，旧回答及其条件/来源保留"
+      ],
+      "remaining": [
+        "完整分派/移交与真实岗位受理、真实资料和浏览器验收"
+      ]
+    }
+  ],
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "label": "关键事实、当前资格和定位可复核",
+      "task_ids": [
+        "T002",
+        "T012",
+        "T013",
+        "T019",
+        "T020",
+        "T021",
+        "T028",
+        "T029",
+        "T031",
+        "T032",
+        "T033"
+      ],
+      "scenario_ids": [
+        "A",
+        "C",
+        "E"
+      ],
+      "evidence_ids": [
+        "EV-05",
+        "EV-08",
+        "EV-09",
+        "EV-11",
+        "EV-02"
+      ],
+      "pass_condition": "逐条对照人工参考，确认型号/适用版本/当前权限/发布和原页定位实际支持关键事实；证据缺失不可判正式成功",
+      "remaining": "真实人工基线与A/C/E未运行；合成来源绑定不替代业务正确性"
+    },
+    {
+      "id": "SC-002",
+      "label": "缺失、冲突、待核验、越权及异常不冒充正式结果",
+      "task_ids": [
+        "T007",
+        "T012",
+        "T013",
+        "T016",
+        "T019",
+        "T020",
+        "T021",
+        "T025",
+        "T028",
+        "T029",
+        "T031",
+        "T032",
+        "T033",
+        "T034"
+      ],
+      "scenario_ids": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "FEEDBACK"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-05",
+        "EV-08",
+        "EV-14",
+        "EV-18",
+        "EV-02"
+      ],
+      "pass_condition": "正负样本得到正确可见状态/限制与可行动提示；无依据内容不混作正式答案；反馈不改变发布资格",
+      "remaining": "真实负例、复杂PDF歧义及反馈真实运行覆盖"
+    },
+    {
+      "id": "SC-003",
+      "label": "持久任务、一次副作用和恢复",
+      "task_ids": [
+        "T006",
+        "T008",
+        "T011",
+        "T014",
+        "T016",
+        "T017",
+        "T018",
+        "T025",
+        "T029",
+        "T031",
+        "T032"
+      ],
+      "scenario_ids": [
+        "B",
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-QUEUE",
+        "LOCAL-SERVICE"
+      ],
+      "evidence_ids": [
+        "EV-06",
+        "EV-08",
+        "EV-12",
+        "EV-13",
+        "EV-15",
+        "EV-17"
+      ],
+      "pass_condition": "刷新、撤权、取消、重试和进程中断可追踪；已提交不重复产物，未知调用先核对且预算/身份保留",
+      "remaining": "未覆盖故障窗口及真实环境端到端恢复；受控时钟不能标为真实等待"
+    },
+    {
+      "id": "SC-004",
+      "label": "撤权/撤回/删除的当前失效与恢复隔离",
+      "task_ids": [
+        "T007",
+        "T010",
+        "T014",
+        "T018",
+        "T021",
+        "T025",
+        "T026",
+        "T029",
+        "T031",
+        "T032",
+        "T033",
+        "T034"
+      ],
+      "scenario_ids": [
+        "D",
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-MIGRATION"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-07",
+        "EV-10",
+        "EV-11",
+        "EV-13",
+        "EV-18"
+      ],
+      "pass_condition": "当前读/用及最终提交检查受影响来源，索引/缓存/预览/下载/后续外发均失效；恢复追平治理不复活旧许可",
+      "remaining": "完整永久清理/一致恢复/反馈引用和真实权限矩阵；已下载内容无法追回"
+    },
+    {
+      "id": "SC-005",
+      "label": "真实桌面用户与管理职责闭环",
+      "task_ids": [
+        "T005",
+        "T015",
+        "T016",
+        "T022",
+        "T023",
+        "T027",
+        "T029",
+        "T031",
+        "T032",
+        "T033",
+        "T034"
+      ],
+      "scenario_ids": [
+        "A",
+        "B",
+        "D",
+        "F",
+        "FEEDBACK"
+      ],
+      "evidence_ids": [
+        "EV-04",
+        "EV-05",
+        "EV-07",
+        "EV-09",
+        "EV-16",
+        "EV-18",
+        "EV-02"
+      ],
+      "pass_condition": "实际三角色用获准资料完成持续对话、新建/恢复对话、默认或缩小范围查询、手册查阅、出处核对、单条分享及首期管理任务和错误恢复，记录浏览器/视口及人工意见",
+      "remaining": "真实角色/资料与人工可用性核对，反馈完整分派及剩余管理职责"
+    },
+    {
+      "id": "SC-006",
+      "label": "人工样本与质量/资源/费用口径",
+      "task_ids": [
+        "T002",
+        "T024",
+        "T028",
+        "T030",
+        "T031"
+      ],
+      "scenario_ids": [
+        "A",
+        "E",
+        "F"
+      ],
+      "evidence_ids": [
+        "EV-01",
+        "EV-02",
+        "EV-14",
+        "EV-16"
+      ],
+      "pass_condition": "样本、分母、计算方法、计时边界、上下文数量和供应商费用单位可复核，实际值与已确认阈值比较；未知不补零",
+      "remaining": "真实人工样本、实际供应商用量/费用、业务阈值均未齐；协议/维度自检非语义质量"
+    },
+    {
+      "id": "SC-007",
+      "label": "最小审计、恢复和删除演练",
+      "task_ids": [
+        "T003",
+        "T006",
+        "T009",
+        "T010",
+        "T026",
+        "T030",
+        "T031"
+      ],
+      "scenario_ids": [
+        "D",
+        "F",
+        "LOCAL-CREATE",
+        "LOCAL-MIGRATION"
+      ],
+      "evidence_ids": [
+        "EV-03",
+        "EV-07",
+        "EV-12",
+        "EV-13",
+        "EV-17",
+        "EV-02"
+      ],
+      "pass_condition": "有实际审计、脱敏诊断及获准备份恢复/删除演练，恢复后当前权限和索引重核，未知副作用不盲目回放",
+      "remaining": "真实保留/RPO/RTO/备份窗口和一致恢复/最终清理证据；默认SQLite事故影响仍UNKNOWN"
+    }
+  ],
+  "cross_cutting_task_relations": [
+    {
+      "task_id": "T031",
+      "relation": "documentation_and_final_reconciliation",
+      "requirements": "FR-001–FR-017",
+      "criteria": "SC-001–SC-007",
+      "note": "跨需求的文档/最终一致性关闭关系，不是每项功能的实现或运行证据；准备依赖与最终关闭分别在tasks维护"
+    }
+  ],
+  "evidence_catalog": [
+    {
+      "id": "EV-01",
+      "title": "需求入口、清单与验收格式",
+      "evidence_level": "static_artifact",
+      "source_refs": [
+        {
+          "path": ".specify/feature.json",
+          "role": "功能目录入口"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/README.md",
+          "role": "权威文档导航"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/formal-scope-manifest.json",
+          "role": "正式范围清单的登记状态"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/inventory.schema.json",
+          "role": "清单字段约束"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/inventory.example.json",
+          "role": "清单格式示例"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/reference-answer.schema.json",
+          "role": "人工答案记录格式"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/reference-answer.example.json",
+          "role": "参考答案格式示例"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/operations.md",
+          "role": "受控本地环境和外部服务登记字段"
+        }
+      ],
+      "supported_claims": [
+        "入口、清单/参考答案格式及运行登记字段均可定位。正式范围清单有89份记录，登记为pending / unreviewed / draft。"
+      ],
+      "limits": [
+        "需获准的黄金样本、逐版本适用性与关键内容复核、人工答案及回归基线。清单入选不赋予发布资格或外部处理许可。"
+      ],
+      "junit_testcases": []
+    },
+    {
+      "id": "EV-02",
+      "title": "正式A–F与人工指标的待办",
+      "evidence_level": "static_artifact",
+      "source_refs": [
+        {
+          "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+          "role": "A–F及反馈扩展验收指南"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/acceptance/README.md",
+          "role": "验收记录结构"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md",
+          "role": "A–F未验证状态"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/metrics/README.md",
+          "role": "指标记录结构"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/artifacts/metrics/status.md",
+          "role": "人工指标未建立状态"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/real-acceptance-readiness.json",
+          "role": "真实材料与逐服务准入待办",
+          "sealed_artifact_sha256": "656bcb6e000f301a96a8bf229951e58349801269fe5af4853dc243adae73bb15"
+        }
+      ],
+      "supported_claims": [
+        "正式A–F验收记录仍为NOT_RUN，反馈补充也未运行。检索/引用/时延/上下文/费用以及备份恢复和删除演练没有业务基线。"
+      ],
+      "limits": [
+        "需实际岗位及签认、获准文字/图文/扫描PDF、版本适用与关键内容确认、人工参考答案及冲突/否定样本。逐服务真实调用另需供应商、数据范围、账号、网络/TLS、额度/费用和留存许可。上述真实待办约束真实验收或调用，独立本地开发可继续。"
+      ],
+      "junit_testcases": []
+    },
+    {
+      "id": "EV-03",
+      "title": "账号会话、完整授权和当前访问",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/security.py",
+          "role": "口令与令牌摘要",
+          "tested_source_sha256": "c89773bce87664dfd155974ea9675af2847599a0fe238246daec600d7e4324eb"
+        },
+        {
+          "path": "src/server/app.py",
+          "role": "平台账号、会话管理和HTTP鉴权入口",
+          "tested_source_sha256": "1e2ed978929b58994f3762402f836c2c028106405f54d60b1de8e58eea88f91e"
+        },
+        {
+          "path": "src/server/services.py",
+          "role": "会话与权限组合复核",
+          "tested_source_sha256": "49a4fce70312f517207dfc4c2f62346d0633cb13938711383667866cfa2fb28c"
+        },
+        {
+          "path": "src/server/models.py",
+          "role": "账号、会话和授权记录",
+          "tested_source_sha256": "3ab604d5953b20c32d5e6727ebbb4f63a696221f54ad7d647a744e1eb94cb95d"
+        }
+      ],
+      "supported_claims": [
+        "合成测试验证口令摘要、完整管理组合、审批范围不符拒绝、已受理任务在登出后的持续性、读取时察觉停用或会话撤销。撤销直接授权后不回退到继承范围。"
+      ],
+      "limits": [
+        "初始管理员并发、凭据重置和全量会话轮换/超时矩阵，以及真实三角色账号与撤权矩阵仍需专项证据。"
+      ],
+      "junit_testcases": [
+        "src/server/test_services.py::test_password_digest_is_verifiable_without_plaintext",
+        "src/server/test_cache_permission_investigation.py::test_direct_revocation_cannot_fall_back_to_inherited_access",
+        "src/server/test_cache_permission_investigation.py::test_in_flight_request_observes_committed_account_revocation[account-/result]"
+      ]
+    },
+    {
+      "id": "EV-04",
+      "title": "审批登记、材料核查和撤销",
+      "evidence_level": "local_synthetic_browser",
+      "source_refs": [
+        {
+          "path": "src/server/governance_api.py",
+          "role": "材料核查与审批动作入口",
+          "tested_source_sha256": "d7d5f0d090562f9a728a11e9412a5fbd42c3deabf0510002c73622bb7517f9a5"
+        },
+        {
+          "path": "src/server/governance.py",
+          "role": "当前授权基于真实依据与有效期的门禁",
+          "tested_source_sha256": "0c64a46f20487f81a603e9aa58d96404131a36f1f0b420d9726bfa0a5694bccf"
+        },
+        {
+          "path": "src/server/governance_models.py",
+          "role": "审批记录",
+          "tested_source_sha256": "9ba31906abc7c2e63a1ad6841a161ea973b08efe9b7b1cad82e6ea26437143a6"
+        },
+        {
+          "path": "src/web/features/admin/AdminOperations.tsx",
+          "role": "管理员浏览器工作区",
+          "tested_source_sha256": "51a93ea49475cbf9f65185b1c8aa01060c2a4bb3ba492eac15c8fae1c6731ba4"
+        },
+        {
+          "path": "src/web/features/admin/registration.tsx",
+          "role": "登记和核查界面",
+          "tested_source_sha256": "4eae1a4ce8ead3016588eddb7b68820c27a6169a604f188e7c6e34bbc163a920"
+        }
+      ],
+      "supported_claims": [
+        "隔离环境的管理端走通待核材料关联、核查、撤销及角色拒绝。服务测试覆盖当前依据、范围、期限和越范围替换拒绝。"
+      ],
+      "limits": [
+        "需要真实外部审批权源/岗位与批准链。完整账号角色、授权预检、审计及系统管理员S系列页面仍有验收缺口。"
+      ],
+      "junit_testcases": [
+        "src/server/test_workspace_browser.py::test_react_admin_pending_proof_verification_revocation_and_role_refusal",
+        "src/server/test_governance.py::test_admin_cannot_create_external_approval_fact",
+        "src/server/test_governance.py::test_approval_evidence_authority_scope_and_expiry_are_current_gates"
+      ]
+    },
+    {
+      "id": "EV-05",
+      "title": "业务确认、核验批次、参考开放和发布",
+      "evidence_level": "local_synthetic_browser",
+      "source_refs": [
+        {
+          "path": "src/server/governance.py",
+          "role": "真实确认门禁、批次选用、发布和参考开放规则",
+          "tested_source_sha256": "0c64a46f20487f81a603e9aa58d96404131a36f1f0b420d9726bfa0a5694bccf"
+        },
+        {
+          "path": "src/server/governance_api.py",
+          "role": "核验、预检与状态入口",
+          "tested_source_sha256": "d7d5f0d090562f9a728a11e9412a5fbd42c3deabf0510002c73622bb7517f9a5"
+        },
+        {
+          "path": "src/server/parsing/providers.py",
+          "role": "解析与原文定位边界",
+          "tested_source_sha256": "86a83598e49932d75f16a320ef4ca0299ca4219bc6ce06538bb5c8d254fbd910"
+        },
+        {
+          "path": "src/web/features/knowledge/KnowledgeAdmin.tsx",
+          "role": "知识管理员工作区",
+          "tested_source_sha256": "2715b14ba7ff309e4394734749ca08e60fd58d6cad4c42944411eeb049e83b3b"
+        },
+        {
+          "path": "src/web/features/knowledge/confirmations.tsx",
+          "role": "确认与核验界面",
+          "tested_source_sha256": "ee81a50f8be0874d601208b7febbb0828c833328e277703e0cd311c3d7002e17"
+        },
+        {
+          "path": "src/web/features/knowledge/publication.tsx",
+          "role": "预检和发布界面",
+          "tested_source_sha256": "2e82468a2ac64f92cf5216c3ec02a18fbde2f7b3e80d0b97f684efdbd4da9a0f"
+        }
+      ],
+      "supported_claims": [
+        "Chrome覆盖合成版本上传、确认/复核、预检、正式发布/索引及撤回或失权；服务测试验证警告覆盖、选用批次、定位变更后失效、未知生效日期、精确草稿人读参考及当前DR复核。"
+      ],
+      "limits": [
+        "须用获准真实版本核对适用性、并行版本、扫描歧义和业务/专业确认。完整K00–K10与企业审批流程仍待验收。"
+      ],
+      "junit_testcases": [
+        "src/server/test_workspace_browser.py::test_react_manager_review_confirmation_publication_and_access_loss",
+        "src/server/test_governance.py::test_review_coverage_cannot_omit_warning_or_use_wrong_batch",
+        "src/server/test_governance.py::test_reference_open_is_exact_human_inline_only_and_revocation_is_immediate"
+      ]
+    },
+    {
+      "id": "EV-06",
+      "title": "新知识库和文档登记、上传与恢复",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/lifecycle_api.py",
+          "role": "知识库和文档登记入口",
+          "tested_source_sha256": "bc2bcfafc1c79701d77f291a6d8aefc8fe5162bd641b53f518d829aaf83856a6"
+        },
+        {
+          "path": "src/server/document_lifecycle.py",
+          "role": "候选资料生命周期",
+          "tested_source_sha256": "89254ac3eaf60199884472e823cbb9b541878209480220dd7793a76418c41bb8"
+        },
+        {
+          "path": "src/server/app.py",
+          "role": "上传和版本事务",
+          "tested_source_sha256": "1e2ed978929b58994f3762402f836c2c028106405f54d60b1de8e58eea88f91e"
+        },
+        {
+          "path": "src/server/services.py",
+          "role": "受控原件存储与上传逻辑",
+          "tested_source_sha256": "49a4fce70312f517207dfc4c2f62346d0633cb13938711383667866cfa2fb28c"
+        },
+        {
+          "path": "src/web/features/knowledge/creation.tsx",
+          "role": "登记页面实现位置",
+          "tested_source_sha256": "ec27f3b8db427417f49fd43fda7616c9fa9b07016dd251dc39c0ad32c50c6513"
+        }
+      ],
+      "supported_claims": [
+        "本地受控登记不自授权限，文件及类别门禁失败无可见文档；上传大小失败清理临时文件，最终范围失效回滚版本与回执。并发版本号不同，覆盖文件先落地后进程终止时精确复用以及内容冲突拒绝。"
+      ],
+      "limits": [
+        "须在目标企业存储和真实样本验证批量/中断、保留和清理策略。有限进程终止窗口不覆盖全部故障模型。"
+      ],
+      "junit_testcases": [
+        "src/server/test_creation.py::test_new_kb_registration_never_creates_business_grants",
+        "src/server/test_creation.py::test_unapproved_category_and_non_pdf_do_not_create_visible_document",
+        "src/server/test_services.py::test_upload_size_failure_cleans_temporary_file"
+      ]
+    },
+    {
+      "id": "EV-07",
+      "title": "暂停、逻辑删除、原件隔离及维护竞态",
+      "evidence_level": "local_synthetic_browser",
+      "source_refs": [
+        {
+          "path": "src/server/document_lifecycle.py",
+          "role": "暂停、解限、逻辑删除及历史元数据",
+          "tested_source_sha256": "89254ac3eaf60199884472e823cbb9b541878209480220dd7793a76418c41bb8"
+        },
+        {
+          "path": "src/server/lifecycle_api.py",
+          "role": "生命周期HTTP入口",
+          "tested_source_sha256": "bc2bcfafc1c79701d77f291a6d8aefc8fe5162bd641b53f518d829aaf83856a6"
+        },
+        {
+          "path": "src/server/operations.py",
+          "role": "逻辑删除及依赖失效",
+          "tested_source_sha256": "093b8aba8a88dc4a8f007351d4b435fbfe9792889a00028ba3ea8c4c8316aa3f"
+        },
+        {
+          "path": "src/server/app.py",
+          "role": "版本/维护/原件路径和会话闸门",
+          "tested_source_sha256": "1e2ed978929b58994f3762402f836c2c028106405f54d60b1de8e58eea88f91e"
+        },
+        {
+          "path": "src/web/features/knowledge/lifecycle.tsx",
+          "role": "生命周期浏览器视图",
+          "tested_source_sha256": "a7f4e7d758a1bbc217434fe3d9caa5be9b9ab6ecb81dcf960f74f9f79e509dc2"
+        }
+      ],
+      "supported_claims": [
+        "Chrome及本地服务覆盖新PDF、暂停后显式解除、逻辑删除未知响应使用原回执、回收站受限元数据/撤权。合成竞态验证删除、停用、撤权对维护和交付的部分窗口；保留的人读原件与正式查询资格分离。"
+      ],
+      "limits": [
+        "最终清理与恢复未开放，留存时限与一致性备份未验证。治理史和清屏证据不能覆盖全部派生数据、外发和恢复后的权限索引核对。"
+      ],
+      "junit_testcases": [
+        "src/server/test_lifecycle_browser.py::test_lifecycle_manager_registration_new_pdf_and_explicit_hold_resolution",
+        "src/server/test_lifecycle_browser.py::test_lifecycle_delete_unknown_response_metadata_retention_and_revocation",
+        "src/server/test_original_lifecycle.py::test_held_original_can_be_reviewed_but_never_used_as_formal_answer"
+      ]
+    },
+    {
+      "id": "EV-08",
+      "title": "任务、对话条件、证据和真实本地SDK",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/execution.py",
+          "role": "任务、条件修订、工具动作和证据提交",
+          "tested_source_sha256": "f9fa21844e761b1e23b5f6f6ecab06027e032938d1dce29bcd083b75797f2062"
+        },
+        {
+          "path": "src/server/execution_api.py",
+          "role": "查询运行工具和员工补充",
+          "tested_source_sha256": "aa841b37db49dda52336164e3bc7822d83df3956b10cbc97a0f7faafcc4b7793"
+        },
+        {
+          "path": "src/server/execution_models.py",
+          "role": "对话、输入和动作记录",
+          "tested_source_sha256": "bd7bf2ff51f0a3a8e5ec5fb5c57374f7ba9693f2a4936ea5400739679e108e06"
+        },
+        {
+          "path": "src/server/runtime_gate.py",
+          "role": "模型出口与预算/许可围栏",
+          "tested_source_sha256": "4f6433390fcc4d744ff02c0f188d9ae78efa93a2d5c5abed48910afc40687b41"
+        },
+        {
+          "path": "src/server/worker.py",
+          "role": "原任务和Node运行器",
+          "tested_source_sha256": "96e15b21034d1c3b1cd71ddb9e9f3f942f226780eb3b3b9439d1519cd6fd8eb7"
+        },
+        {
+          "path": "src/agent_runtime/src/runtime-host.ts",
+          "role": "受控Pi SDK运行时",
+          "tested_source_sha256": "9e6da00e29d6f2ec9695e4ad7ddb2f6282605b215dd0178e6088a219f721cb71"
+        },
+        {
+          "path": "src/agent_runtime/src/controlled-provider.ts",
+          "role": "合成协议模型出口",
+          "tested_source_sha256": "20509fbc655f803ec944379ce9b5be0c376a74ff2b24b562505fa533344d8315"
+        }
+      ],
+      "supported_claims": [
+        "真实本地Node/Pi SDK接回环合成模型，保留出处和警告，正式回答来自验证后的证据；缺型号补充恢复同任务，上游失败可见且不重复调用。覆盖确认条件修订、作用域隔离、取消/撤权门禁和短暂提示词与持久摘要依赖边界。"
+      ],
+      "limits": [
+        "仅有八个查询工具入口和部分对话/任务子集。无真实模型/资料正确性、完整20工具/四层产品记忆、正式桌面持续对话或所有版本冲突场景验收。"
+      ],
+      "junit_testcases": [
+        "src/server/test_worker.py::test_real_sdk_worker_query_preserves_pdf_warning_and_enforces_final_answer",
+        "src/server/test_worker.py::test_missing_model_resumes_original_task_through_real_worker",
+        "src/server/test_worker.py::test_real_sdk_upstream_failure_remains_visible_and_is_not_retried"
+      ]
+    },
+    {
+      "id": "EV-09",
+      "title": "桌面查询恢复、状态和原文核对",
+      "evidence_level": "local_synthetic_browser",
+      "source_refs": [
+        {
+          "path": "src/web/features/query/App.tsx",
+          "role": "正式React查询工作区",
+          "tested_source_sha256": "2e5f57a5965344705244252c707bc0ca79b53abc80d4e39ea613a7878312fb70"
+        },
+        {
+          "path": "src/web/api.ts",
+          "role": "请求及权限变化处理",
+          "tested_source_sha256": "530be9730556eac4bfbff82e779673bacabb08d645689679a90a85655ec158e8"
+        },
+        {
+          "path": "src/server/static/query.js",
+          "role": "历史静态参考页用于独立Chrome场景",
+          "tested_source_sha256": "9cd904c80aae4529ccc9080b831979dce3dc97004a8d7ca2b2e1fc29ecb5d81e"
+        },
+        {
+          "path": "src/server/app.py",
+          "role": "查询、结果和精确版本原件入口",
+          "tested_source_sha256": "1e2ed978929b58994f3762402f836c2c028106405f54d60b1de8e58eea88f91e"
+        }
+      ],
+      "supported_claims": [
+        "真实Chrome在React工作区通过单次任务恢复、等待型号、刷新结果和精确PDF页访问；撤权清除引文且原件访问拒绝。旧参考页另验证1366×900、离线恢复、三角色对合成原件的访问分界。"
+      ],
+      "limits": [
+        "引用打开已观察，仍需跨库按型号/文件名查阅、正式React桌面持续/新建对话、版本冲突与完整错误状态、浏览器兼容及布局验收。旧参考页离线行为不外推至整个React界面。"
+      ],
+      "junit_testcases": [
+        "src/server/test_workspace_browser.py::test_react_query_unknown_response_resume_input_result_and_revocation",
+        "src/server/test_query_browser.py::test_local_browser_wait_resume_restore_citations_and_roles"
+      ]
+    },
+    {
+      "id": "EV-10",
+      "title": "单条回答分享与历史读取",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/app.py",
+          "role": "单回答分享HTTP入口",
+          "tested_source_sha256": "1e2ed978929b58994f3762402f836c2c028106405f54d60b1de8e58eea88f91e"
+        },
+        {
+          "path": "src/server/execution.py",
+          "role": "当前交付和绑定历史回答",
+          "tested_source_sha256": "f9fa21844e761b1e23b5f6f6ecab06027e032938d1dce29bcd083b75797f2062"
+        },
+        {
+          "path": "src/server/services.py",
+          "role": "当前证据读取和来源门禁",
+          "tested_source_sha256": "49a4fce70312f517207dfc4c2f62346d0633cb13938711383667866cfa2fb28c"
+        },
+        {
+          "path": "src/server/execution_models.py",
+          "role": "回答绑定对象",
+          "tested_source_sha256": "bd7bf2ff51f0a3a8e5ec5fb5c57374f7ba9693f2a4936ea5400739679e108e06"
+        }
+      ],
+      "supported_claims": [
+        "本地API将分享绑定确切完成快照，接收者无需看到私有输入或条件记录且仍须拥有当前原文权限；客户端写入门禁、撤销的幂等重放和新执行不追改旧分享已覆盖。"
+      ],
+      "limits": [
+        "需要真实三角色的分享、到期、撤销和浏览器全流程，含发出方/接收方的完整操作授权矩阵。"
+      ],
+      "junit_testcases": [
+        "src/server/test_answer_share.py::test_recipient_reads_only_answer_with_current_dr_and_cannot_read_owner_input_or_conditions",
+        "src/server/test_answer_share.py::test_existing_share_does_not_grant_source_access_after_dr_is_revoked",
+        "src/server/test_answer_share.py::test_share_put_requires_csrf_etag_idempotency_and_replay_cannot_undo_revocation"
+      ]
+    },
+    {
+      "id": "EV-11",
+      "title": "本地向量索引、旧内容和当前访问",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/vector_store.py",
+          "role": "本地PG向量存取与当前来源校验",
+          "tested_source_sha256": "b4bfb88f8bb01f0b16eb99dc05594fb6a670009b6f5416b7a4777af8d01e930d"
+        },
+        {
+          "path": "src/server/migrations/versions/0007_pgvector.py",
+          "role": "向量存储迁移",
+          "tested_source_sha256": "ec96a98f85b595adf30c25e4d747a1767400b209a91e9ece9664a9ec344a543e"
+        },
+        {
+          "path": "src/server/services.py",
+          "role": "查询与索引状态",
+          "tested_source_sha256": "49a4fce70312f517207dfc4c2f62346d0633cb13938711383667866cfa2fb28c"
+        }
+      ],
+      "supported_claims": [
+        "隔离PG/pgvector验证1024维读写和余弦运算、合成正式来源最近邻查询与当前授权、模型标识绑定、错误向量及旧索引不使用新内容。"
+      ],
+      "limits": [
+        "合成索引存取与现有业务关键词路径各自受测。新BGE-M3适配器还需受控接入业务索引，检索召回/重排和资料规模未用黄金样本测量。"
+      ],
+      "junit_testcases": [
+        "src/server/test_local_postgres.py::test_vector_1024_roundtrip_and_cosine_operator",
+        "src/server/test_local_postgres.py::test_synthetic_formal_source_upsert_nearest_and_current_acl",
+        "src/server/test_services.py::test_stale_index_does_not_answer_from_new_content"
+      ]
+    },
+    {
+      "id": "EV-12",
+      "title": "任务队列、租约和投递恢复",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/queue_runtime.py",
+          "role": "Celery/RabbitMQ稳定ID信封",
+          "tested_source_sha256": "1817ffffd231db85bbb32ea42797337425cc563c0d30e3695038f1320a7f2d40"
+        },
+        {
+          "path": "src/server/worker.py",
+          "role": "查询Worker",
+          "tested_source_sha256": "96e15b21034d1c3b1cd71ddb9e9f3f942f226780eb3b3b9439d1519cd6fd8eb7"
+        },
+        {
+          "path": "src/server/execution.py",
+          "role": "任务与outbox事务",
+          "tested_source_sha256": "f9fa21844e761b1e23b5f6f6ecab06027e032938d1dce29bcd083b75797f2062"
+        },
+        {
+          "path": "src/server/runtime_gate.py",
+          "role": "调用去重、预算与双租约",
+          "tested_source_sha256": "4f6433390fcc4d744ff02c0f188d9ae78efa93a2d5c5abed48910afc40687b41"
+        }
+      ],
+      "supported_claims": [
+        "真实本地PG/RabbitMQ/Celery消费合成原任务；信封仅任务和派发ID，过期租约、双竞争发布者、已提交取消及一个进程中断窗口保留身份、回执和未知预算。"
+      ],
+      "limits": [
+        "不覆盖Broker确认所有不确定窗口、多机、高可用、故障转移、容量或企业备份恢复。此组中的进程用例属于404条JUnit，EV-17为独立报告。"
+      ],
+      "junit_testcases": [
+        "src/server/test_local_queue.py::test_postgres_and_rabbitmq_celery_worker_completes_original_task",
+        "src/server/test_local_queue.py::test_publisher_claims_database_rows_and_emits_stable_id_only_envelope",
+        "src/server/test_postgres_recovery.py::test_expired_session_and_step_leases_fence_validated_old_worker"
+      ]
+    },
+    {
+      "id": "EV-13",
+      "title": "迁移隔离、受控升级和事故库保护",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/migrate.py",
+          "role": "显式计划/校验与回执入口",
+          "tested_source_sha256": "f14890400dc46d375a687819120af2293c04f960155d097741d8a8ef0a1afdcc"
+        },
+        {
+          "path": "src/server/migration_safety.py",
+          "role": "迁移前态、目标锁和备份记录",
+          "tested_source_sha256": "aaf9cb0d465700385733840b48d89d38a68adac5245e49ffbf4015ace64585c7"
+        },
+        {
+          "path": "src/server/db.py",
+          "role": "事故SQLite连接保护",
+          "tested_source_sha256": "4af1c8fe578c0e8e04427ba67c2a90f3cb1ced338805a543a3b4967acd917739"
+        },
+        {
+          "path": "src/server/migrations/env.py",
+          "role": "禁止隐式目标",
+          "tested_source_sha256": "872cb2b604a01c3c857ee5517562de61c23d9cc40e9f4b50f16231fc413e7b29"
+        },
+        {
+          "path": "src/server/migrations/versions/0008_service_admission.py",
+          "role": "服务管理迁移",
+          "tested_source_sha256": "4f260303888595dcf6b4b29d872d75c0b8bf87253941932c1ed9ba0002f5f3a4"
+        },
+        {
+          "path": "src/server/operations.py",
+          "role": "脱敏任务/供应商投影与逻辑删除入口，静态定位",
+          "tested_source_sha256": "093b8aba8a88dc4a8f007351d4b435fbfe9792889a00028ba3ea8c4c8316aa3f"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/checks.json",
+          "role": "封存本地阶段及事故库已核对状态",
+          "sealed_artifact_sha256": "de047f6dfe746f3d859f61ebccac1527885ec272ba0f7c399dac6df8c755f577"
+        }
+      ],
+      "supported_claims": [
+        "验证默认SQLite和未明确目标拒绝、合成SQLite备份保全与提交不确定后的状态、显式隔离PG的迁移/服务修订CAS。封存核对记录事故文件未再变更，历史影响仍UNKNOWN。 运维模块另可定位任务和供应商的脱敏投影。"
+      ],
+      "limits": [
+        "事故库缺事前可靠证据。显式隔离库迁移与SQLite保全用例无法替代既有非空PG停写审阅升级，也未证明一致性备份恢复与恢复后权限/索引复核。 端到端审计与脱敏诊断完备性仍需专项验证。"
+      ],
+      "junit_testcases": [
+        "src/server/test_migration_safety.py::test_accident_command_is_refused_without_opening_default_database",
+        "src/server/test_migration_safety.py::test_existing_sqlite_is_backed_up_and_rows_and_triggers_survive",
+        "src/server/test_migration_safety.py::test_lost_commit_ack_requires_inspection_instead_of_refusal_or_retry"
+      ]
+    },
+    {
+      "id": "EV-14",
+      "title": "三类适配与合成业务解析/向量衔接",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/parsing/mineru.py",
+          "role": "MinerU V4和legacy Content List V1边界",
+          "tested_source_sha256": "b646ac365b6bbab4d38f0ce0af6e2bb3def317bb32c6793d11d44c5382c01e91"
+        },
+        {
+          "path": "src/server/inference_adapters.py",
+          "role": "OpenAI兼容生成/BGE-M3响应验证",
+          "tested_source_sha256": "b32eaa7501e52eac6cecb24f21e296311bafb56b109e890e60577b8fd4945330"
+        },
+        {
+          "path": "src/server/provider_transport.py",
+          "role": "协议传输界面",
+          "tested_source_sha256": "50ca3af11efb8bf493acfddc63f1cf6e6950cff45f2b31d2341eba76902e5d8c"
+        },
+        {
+          "path": "src/server/service_admission.py",
+          "role": "绑定端点/模型/凭据/CA及固定样本验证",
+          "tested_source_sha256": "f03b725e61032ddd80b1131dc43838a0f42c9f679a9262671a09fb9f94a23ab0"
+        },
+        {
+          "path": "src/server/synthetic_provider.py",
+          "role": "确定性回环服务夹具",
+          "tested_source_sha256": "d2843f4719ca3d88268c2544ba973a8b4ab8bd4382e2e8615c05e271977c4517"
+        },
+        {
+          "path": "src/server/service_use.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "fb1f8892da3fb11183a2a9747b135610433bd80d0d344c411344d39c0cd71dba"
+        },
+        {
+          "path": "src/server/parse_jobs.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "173b6a6d0acda2ac8543e5c8f0ee5ef2a2b5efc065138a8367cb07461c6119c9"
+        },
+        {
+          "path": "src/server/embedding_jobs.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "6ba8556c4caeab23fc42734776a7f25e29181965c1eaac0961da74661280c51b"
+        }
+      ],
+      "supported_claims": [
+        "精确输入/用途/修订许可接入业务解析和嵌入，固定v4+legacy协议、原ZIP私有保留、畸形隔离、1024维向量原子落PG；HTTP/HTTPS门禁和来源警告仍需人工核验。"
+      ],
+      "limits": [
+        "仅合成、小批次、旧格式固定协议；真实供应商、获准复杂PDF/语义质量/企业准入未验收。"
+      ],
+      "junit_testcases": [
+        "src/server/test_embedding_service_use.py::test_http_acceptance_pinned_worker_pgvector_and_unchanged_keyword_index",
+        "src/server/test_embedding_service_use.py::test_unknown_post_cannot_be_resubmitted_with_new_http_key_or_worker_attempt",
+        "src/server/test_embedding_service_use.py::test_changed_review_snapshot_blocks_provider_write"
+      ]
+    },
+    {
+      "id": "EV-15",
+      "title": "逐用途许可、固定修订、预算与Pi账本",
+      "evidence_level": "local_synthetic_runtime",
+      "source_refs": [
+        {
+          "path": "src/server/service_admission.py",
+          "role": "持久调用意图及受约束执行",
+          "tested_source_sha256": "f03b725e61032ddd80b1131dc43838a0f42c9f679a9262671a09fb9f94a23ab0"
+        },
+        {
+          "path": "src/server/service_api.py",
+          "role": "需当前账号会话的服务管理API",
+          "tested_source_sha256": "e5ae72ac63a87cf781c3985daa9e533f6aa1051f3dd3d07737ba7381675d6a92"
+        },
+        {
+          "path": "src/server/service_models.py",
+          "role": "配置修订、自检、预检和尝试账本",
+          "tested_source_sha256": "e85c42c21ad8ecf4bfc7a49c22c74194a347635283c2c9d409f780e00a72a930"
+        },
+        {
+          "path": "src/server/service_use_models.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "6dff5566f21e6e762634d4c600fe7eafe2f5a3b13600217190b7cc4bab5fa73e"
+        },
+        {
+          "path": "src/server/runtime_gate.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "4f6433390fcc4d744ff02c0f188d9ae78efa93a2d5c5abed48910afc40687b41"
+        },
+        {
+          "path": "src/server/migration_safety.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "aaf9cb0d465700385733840b48d89d38a68adac5245e49ffbf4015ace64585c7"
+        },
+        {
+          "path": "src/server/service_use_api.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "96a1b2e671d99beb06c42cdda3c5a3f6f82b04c9eac049d69dcaee7d40ecf252"
+        }
+      ],
+      "supported_claims": [
+        "五用途选用和固定pin、永久撤销epoch、精确上下文证明、当前权限/租约、调用/预算CAS；真实Pi1.5.2按固定修订派发，未知不重发；迁移表定义指纹及PG最后预算争用验证。"
+      ],
+      "limits": [
+        "不是企业secret/真实批准/计费健康或许可续期；SDK自动摘要/压缩全流程未验证；费用未知，预算不代表真实账单。"
+      ],
+      "junit_testcases": [
+        "src/server/test_pi_service_use.py::test_selected_revision_is_pinned_through_real_sdk_worker",
+        "src/server/test_pi_service_use.py::test_selected_purpose_and_input_are_each_required",
+        "src/server/test_pi_service_use.py::test_enabled_auxiliary_purpose_requires_separate_pin_and_exact_proof"
+      ]
+    },
+    {
+      "id": "EV-16",
+      "title": "实际桌面管理页用途选用与原请求恢复",
+      "evidence_level": "local_synthetic_browser",
+      "source_refs": [
+        {
+          "path": "src/web/features/admin/ServiceProfiles.tsx",
+          "role": "服务配置界面",
+          "tested_source_sha256": "f9acc5b888b70fc657dc77b9b55ed9ec2f41505ba1fe917c0f9580757a6788e7"
+        },
+        {
+          "path": "src/web/features/admin/AdminOperations.tsx",
+          "role": "管理员入口",
+          "tested_source_sha256": "51a93ea49475cbf9f65185b1c8aa01060c2a4bb3ba492eac15c8fae1c6731ba4"
+        },
+        {
+          "path": "src/web/api.ts",
+          "role": "真实客户端API",
+          "tested_source_sha256": "530be9730556eac4bfbff82e779673bacabb08d645689679a90a85655ec158e8"
+        },
+        {
+          "path": "src/web/test/api.test.mjs",
+          "role": "前端客户端测试来源",
+          "tested_source_sha256": "6a86ec0176119d193375dbef05520b40759bd297680be2303a538504c365756c"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/build-checks.json",
+          "role": "前端三项命令结束码",
+          "sealed_artifact_sha256": "d9995d3c43d782fc696512b3aef13cece2c3c3de5a7ed69ed9f5615bbc86ff6a"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/build.log",
+          "role": "16项客户端检查结果",
+          "sealed_artifact_sha256": "07716feb25d84f61e4b596df6dfc4d0eb44f7bdbb75e85d6f1ea2ddf089960e1"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/web-source-manifest.json",
+          "role": "前端源码绑定",
+          "sealed_artifact_sha256": "eef227179edda834da917f0673734dab7b8ccbeeca684833f676bbf290ca0467"
+        },
+        {
+          "path": "outputs/service-adapters/2026-11-18/web-build-manifest.json",
+          "role": "构建产物文件绑定",
+          "sealed_artifact_sha256": "047d107463f82f2ea517e96e621e7a3f15747714db4883751559d2ff3b81da4c"
+        }
+      ],
+      "supported_claims": [
+        "实际Chrome/PG验证逐用途预检不改状态、选用确认丢响应后按原key/If-Match/body恢复、缺凭据安全停用；16客户端/类型/构建独立通过。"
+      ],
+      "limits": [
+        "桌面合成子流程，不代表全系统管理员职责及真实A–F。构建链既有high未消失，不部署。"
+      ],
+      "junit_testcases": [
+        "src/server/test_service_browser.py::test_react_services_protocol_tests_previews_activation_recovery_and_safe_stop"
+      ]
+    },
+    {
+      "id": "EV-17",
+      "title": "业务解析进程退出、原batch恢复及源作业防重",
+      "evidence_level": "local_synthetic_process_recovery",
+      "source_refs": [
+        {
+          "path": "src/server/parse_jobs.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "173b6a6d0acda2ac8543e5c8f0ee5ef2a2b5efc065138a8367cb07461c6119c9"
+        },
+        {
+          "path": "src/server/parse_worker.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "94d16c642ac117c00faf5793c5a87e4754c85d9bac1e69f89436750c781cd000"
+        },
+        {
+          "path": "src/server/test_parse_service_use.py",
+          "role": "本轮业务用途增量",
+          "tested_source_sha256": "647430f6dac32c2d86acee099e3330b9e83468d7e2f144f56d282727ae2dcde1"
+        }
+      ],
+      "supported_claims": [
+        "当前业务解析子进程实际退出、batch在PUT前由独立DB连接观察已提交；受控时钟推进121秒后只GET原batch，POST/PUT各一次；新key与PG并发不能绕过未决源作业。"
+      ],
+      "limits": [
+        "进程退出与受控时钟推进分别标明，不声称真实等待121秒、覆盖所有崩溃窗口/HA；原ZIP可能留私有孤儿待清理。旧两案独立实测只按原身份保留。"
+      ],
+      "junit_testcases": [
+        "src/server/test_parse_service_use.py::test_selected_parse_accepts_one_business_run_and_emits_unreviewed_source_blocks[sqlite]",
+        "src/server/test_parse_service_use.py::test_selected_parse_accepts_one_business_run_and_emits_unreviewed_source_blocks[postgres]",
+        "src/server/test_parse_service_use.py::test_other_resource_attestation_and_changed_original_cannot_send[sqlite]"
+      ]
+    },
+    {
+      "id": "EV-18",
+      "title": "FR-017反馈与回访的设计契约",
+      "evidence_level": "source_inspection",
+      "source_refs": [
+        {
+          "path": "specs/001-device-operation-maintenance-query/spec.md",
+          "role": "FR-017和独立业务门禁"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/contracts/ui.md",
+          "role": "员工提交及原入口回访的候选UI"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/quickstart.md",
+          "role": "反馈扩展场景及未执行"
+        },
+        {
+          "path": "specs/001-device-operation-maintenance-query/tasks.md",
+          "role": "T034的实施和验收范围"
+        },
+        {
+          "path": "doc/api/接口设计.md",
+          "role": "13.4、17节候选HTTP/受理契约"
+        },
+        {
+          "path": "doc/database/数据库设计.md",
+          "role": "13.3、17节候选持久化"
+        },
+        {
+          "path": "src/server/execution.py",
+          "role": "核查运行工具注册/别名和启用集",
+          "tested_source_sha256": "f9fa21844e761b1e23b5f6f6ecab06027e032938d1dce29bcd083b75797f2062"
+        },
+        {
+          "path": "src/agent_runtime/src/runtime-host.ts",
+          "role": "核查SDK工具白名单",
+          "tested_source_sha256": "9e6da00e29d6f2ec9695e4ad7ddb2f6282605b215dd0178e6088a219f721cb71"
+        }
+      ],
+      "supported_claims": [
+        "静态材料给出对话/手册入口、权限检查、最小附带内容、受理/回访、资料更新后重查并保留旧回答及独立业务门禁。当前快照无FR-017端到端或对应工具运行证据。"
+      ],
+      "limits": [
+        "提交/受理/答复、分派、资料更新提示、独立原回答与重查、范围与撤权、脱敏审计及合成串联仍需实现和验证；真实岗位由业务确认。"
+      ],
+      "junit_testcases": []
+    }
+  ]
+}

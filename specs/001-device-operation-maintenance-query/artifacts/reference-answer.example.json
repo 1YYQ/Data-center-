@@ -1,0 +1,9 @@
+{
+  "case_id": "normal-query-example",
+  "question": "如何完成设备开机并核对注意事项？",
+  "model": "EXAMPLE-1",
+  "expected_status": "formal",
+  "facts": ["只采用已发布且内容已核验的版本"],
+  "required_locators": [{"relative_path": "doc/example/doc/example.pdf", "locator": {"file_page": 1}}],
+  "warnings": []
+}

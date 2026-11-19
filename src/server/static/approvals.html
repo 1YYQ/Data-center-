@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>授权审批核查 · 数据中心</title>
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/approvals.css">
+</head>
+<body>
+<main class="shell approvals-shell">
+  <header class="topbar">
+    <div><p class="eyebrow">DATA CENTER / ACCESS GOVERNANCE</p><h1>授权审批核查</h1><p class="muted">登记外部审批事实，核对其证据和职责依据，并追踪撤销回执。</p></div>
+    <div class="account"><a href="/" class="ghost">返回查询</a><span id="identity" class="session-chip"></span><button id="logout" class="ghost">退出</button></div>
+  </header>
+  <section id="login" class="panel login-panel">
+    <div><p class="eyebrow">系统管理员工作区</p><h2>使用现有账号登录</h2><p class="muted">需要系统管理员角色与当前有效的授权管理职责。进入本页不会授予业务资料访问权。</p></div>
+    <form id="login-form" class="stack"><label>账号<input name="username" autocomplete="username" required></label><label>口令<input name="password" type="password" autocomplete="current-password" required></label><button>登录</button><p id="login-error" class="error" role="alert"></p></form>
+  </section>
+  <section id="workspace" class="hidden">
+    <div class="scope-note"><span class="scope-mark">!</span><p><strong>核查不等于批准</strong><br>本页只记录系统外已发生的决定。系统管理员不能替代审批人，也不能为自己增加业务授权。</p></div>
+    <div class="approval-layout">
+      <aside class="panel queue-panel">
+        <div class="section-heading"><div><p class="eyebrow">REGISTERED FACTS</p><h2>审批登记</h2></div><button id="reload" class="ghost">刷新</button></div>
+        <div class="queue-tools"><label for="filter">状态</label><select id="filter"><option value="all">全部状态</option><option value="unverified">待核查</option><option value="verified">已核查</option><option value="rejected">未通过</option><option value="revoked">已撤销</option><option value="unavailable">当前不可用</option></select></div>
+        <div id="approval-list" class="approval-list" aria-live="polite"></div>
+        <p id="empty-list" class="empty-state">尚无可管理的审批登记。</p>
+        <button id="new-approval" class="new-button">＋ 登记外部审批事实</button>
+      </aside>
+      <section class="panel work-panel">
+        <div id="welcome" class="welcome"><span class="welcome-index">01</span><p class="eyebrow">REVIEW DESK</p><h2>选择一条登记记录</h2><p class="muted">左侧显示当前职责范围内的审批记录。详情只包含登记字段和依据引用，不展示业务文档正文。</p></div>
+        <div id="detail" class="hidden">
+          <div class="record-heading"><div><p class="eyebrow">APPROVAL RECORD <span id="record-id"></span></p><h2 id="record-subject"></h2></div><span id="record-state" class="state-pill"></span></div>
+          <div class="facts-grid" id="facts"></div>
+      <section class="work-section"><div class="section-title"><div><span class="step-no">A</span><div><h3>外部审批依据</h3><p>附件先作为未核实材料登记，再显式关联到本审批；核查通过仍要求受控证据。</p></div></div></div>
+            <form id="evidence-form" class="upload-row"><label class="file-field">选择 PDF 附件<input id="evidence-file" type="file" accept="application/pdf,.pdf" required></label><label>来源说明<input id="evidence-source" required maxlength="500" placeholder="例如：签批单编号、来源部门"></label><button>登记附件</button></form>
+            <div id="evidence-message" class="inline-note" role="status"></div><div id="evidence-list" class="evidence-list"></div>
+            <form id="evidence-link-form" class="link-evidence-form"><fieldset id="evidence-choices"><legend>本记录已有材料</legend><div id="evidence-candidates"></div></fieldset><button id="link-evidence-button" class="ghost">更新关联材料</button></form>
+          </section>
+          <section class="work-section"><div class="section-title"><div><span class="step-no">B</span><div><h3>核查记录</h3><p>只有服务端列出的现有职责依据可选；依据不匹配时服务端拒绝“已核实”。</p></div></div></div>
+            <form id="verification-form" class="review-form"><label>核查结论<select id="decision"><option value="verified">核对通过</option><option value="rejected">不通过</option></select></label><label>实际审批职责依据<select id="authority-basis" required><option value="">加载可用依据…</option></select></label><label class="wide">核查说明<textarea id="verification-reason" rows="3" required maxlength="1000" placeholder="记录核对了什么，以及结论理由"></textarea></label><button id="verify-button">提交核查记录</button></form>
+            <p id="verification-block" class="block-note hidden"></p>
+          </section>
+          <section class="work-section revoke-section"><div class="section-title"><div><span class="step-no">C</span><div><h3>外部撤销登记</h3><p>需要已核实、精确指向该审批的外部撤销证据。此操作会使依赖授权失效。</p></div></div></div>
+            <form id="revocation-form" class="review-form"><label>已核实撤销证据引用<input id="revocation-ref" required placeholder="现有证据编号"></label><label class="wide">登记说明<textarea id="revocation-reason" rows="2" required maxlength="1000"></textarea></label><button class="danger">登记外部撤销</button></form><div id="revocation-result" class="inline-note" role="status"></div>
+          </section>
+        </div>
+        <div id="status" class="status" role="status"></div>
+      </section>
+    </div>
+  </section>
+  <dialog id="register-dialog" class="register-dialog"><form id="registration-form" method="dialog">
+    <div class="dialog-head"><div><p class="eyebrow">EXTERNAL APPROVAL / APPEND ONLY</p><h2>登记真实审批事实</h2></div><button type="button" id="close-dialog" class="ghost" aria-label="关闭">×</button></div>
+    <p class="warning">填写系统外实际发生的批准或拒绝。登记操作本身只创建待核查记录，不会批准授权。</p>
+    <div class="review-form register-grid">
+      <label>被授权用户 ID<input name="applicant" required></label><label>外部决定<select name="decision" required><option value="approved">实际批准</option><option value="rejected">实际拒绝</option></select></label>
+      <label>实际审批人<input name="identity_label" required></label><label>审批职责<input name="responsibility" required></label><label>审批人平台账号引用（如适用）<input name="approver_user_ref"></label>
+      <label>审批时间<input name="approved_at" type="datetime-local" required></label><label>授权开始<input name="valid_from" type="datetime-local" required></label><label>授权截止<input name="valid_until" type="datetime-local" required></label>
+      <label>知识库 ID<input name="knowledge_base_id" required></label><label>文档 ID（可选）<input name="document_id"></label>
+      <label>资料等级<input name="level" required></label><label>资料类别<input name="category" required></label><label>用途分类<input name="need_class" required></label>
+      <label class="wide">允许操作<select name="operations" multiple required><option value="document.read">查看文档</option><option value="knowledge.query">知识查询</option></select><span class="field-hint">按住 Ctrl / ⌘ 可选择多项。</span></label>
+      <label class="wide">实际审批人的职责依据编号<input name="authority_basis_ref" required placeholder="填写外部职责登记中的依据编号"></label>
+      <label class="wide">外部审批来源说明<input name="evidence_locator" maxlength="500" placeholder="编号、签批路径或可追溯定位" required></label>
+      <label class="wide">替代已有登记（可选）<select name="supersedes_id"><option value="">不替代</option></select></label>
+    </div>
+    <div class="dialog-actions"><button type="button" id="cancel-dialog" class="ghost">取消</button><button id="register-submit">保存为待核查</button></div><p id="registration-error" class="error" role="alert"></p>
+  </form></dialog>
+</main>
+<script src="/assets/approvals.js" defer></script>
+</body></html>

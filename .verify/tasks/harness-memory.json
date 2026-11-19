@@ -1,0 +1,38 @@
+{
+  "task": {"id": "harness-memory", "revision": "1.0"},
+  "sources": {
+    "governance": ["AGENTS.md"],
+    "spec": ["doc/requirements/SPEC.md"],
+    "plan": ["doc/planning/PLAN.md"],
+    "design": ["doc/design/2026-11-15-harness-memory-design.md"]
+  },
+  "scope": {"paths": ["AGENTS.md", "README.md", "doc/README.md", "doc/memory", "src/memory"]},
+  "checks": [
+    {
+      "id": "memory-structure",
+      "type": "command",
+      "command": ["{python}", "-m", "src.memory.validate"],
+      "expected_exit": 0,
+      "evidence": ["doc/memory/README.md", "doc/memory/context.md", "doc/memory/decisions.md", "doc/memory/state.md", "src/memory/validate.py"]
+    },
+    {
+      "id": "memory-compile",
+      "type": "command",
+      "command": ["{python}", "-m", "compileall", "-q", "src/memory"],
+      "expected_exit": 0,
+      "evidence": ["src/memory/__init__.py", "src/memory/validate.py"]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "statement": "Memory 文件结构、状态字段、来源链接和校验器均可通过既有 Verify 入口检查。",
+      "checks": ["memory-structure", "memory-compile"],
+      "evidence": ["doc/memory/README.md", "doc/memory/state.md"]
+    }
+  ],
+  "risks": [
+    "结构校验不能判断记忆语义正确性，也不能替代真实独立 Agent 的跨会话体验验收。",
+    "Memory 启动和更新依赖 Agent 遵循 AGENTS.md，当前没有应用运行时或 Git hook 强制执行。"
+  ]
+}

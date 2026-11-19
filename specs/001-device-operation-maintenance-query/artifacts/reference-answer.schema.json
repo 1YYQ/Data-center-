@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://data-center.local/schemas/device-reference-answer.json",
+  "type": "object",
+  "required": ["case_id", "question", "expected_status", "facts"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "question": {"type": "string"},
+    "model": {"type": ["string", "null"]},
+    "expected_status": {"enum": ["formal", "insufficient_evidence", "access_limited", "version_conflict", "pending_review", "service_failure"]},
+    "facts": {"type": "array", "items": {"type": "string"}},
+    "required_locators": {"type": "array", "items": {"type": "object", "required": ["relative_path", "locator"], "properties": {"relative_path": {"type": "string"}, "locator": {"type": "object"}}}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

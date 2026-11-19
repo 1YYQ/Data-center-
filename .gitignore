@@ -10,6 +10,11 @@
 /logs/
 *.log
 
+# Existing local sample/model locations; retain files locally, never stage them.
+/doc/example/doc/
+/ai_models/
+/knowledge_base/temp-files/
+
 # Credentials and local settings
 .env
 .env.*

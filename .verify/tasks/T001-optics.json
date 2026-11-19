@@ -1,0 +1,16 @@
+{
+  "task": {"id": "T001-optics", "revision": "1.0"},
+  "sources": {"governance": ["AGENTS.md"], "spec": ["doc/requirements/SPEC.md"], "plan": ["doc/planning/PLAN.md"], "contract": ["experiments/T001-optics/CASE.md"]},
+  "scope": {"paths": ["experiments/T001-optics"]},
+  "checks": [
+    {"id": "existing-run", "type": "evidence", "manifest": "experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/run.json", "status_path": "status", "expected_status": "PASS", "source_hashes": [
+      {"path": "experiments/T001-optics/CASE.md"}, {"path": "experiments/T001-optics/input.json"}, {"path": "experiments/T001-optics/expected.json"},
+      {"path": "experiments/T001-optics/calculate.py"}, {"path": "experiments/T001-optics/test_calculate.py"}, {"path": "experiments/T001-optics/run_verification.py"}],
+      "evidence": ["experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/run.json", "experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/tests.json", "experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/independent-check.json", "experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/REPORT.md"]}
+  ],
+  "acceptance": [
+    {"id": "A1", "statement": "模拟计算与独立等价算式核验通过，且源码与输入运行前后未变。", "checks": ["existing-run"], "evidence": ["experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/REPORT.md"]},
+    {"id": "A2", "statement": "缺项、非法单位、几何边界、记录映射和舍入边界均有实际回归证据。", "checks": ["existing-run"], "evidence": ["experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/tests.json"]}
+  ],
+  "risks": ["该样例是人工构造材料，不能证明真实企业流程、物理前提、OCR、RAG、权限或 Excel 交付。"]
+}

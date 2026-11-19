@@ -1,0 +1,10 @@
+.index-management h3, .index-management h4 { margin: 0 0 10px; }
+.index-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.index-generation-list, .index-batches ul { list-style: none; margin: 0; padding: 0; }
+.index-generation-list { display: grid; gap: 6px; max-block-size: 260px; overflow: auto; padding: 4px; }
+.index-generation-list button { display: flex; justify-content: space-between; width: 100%; gap: 4px 12px; flex-wrap: wrap; text-align: start; }
+.index-generation-list button[aria-pressed=true] { color: var(--accent-dark); background: #eef2ff; box-shadow: inset 0 0 0 1px #dfe6ff; }
+.index-generation-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.index-generation-detail > p { margin: 8px 0; }
+.index-batches { margin: 8px 0; }
+.index-batches li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; padding: 6px 0; border-top: 1px solid var(--line); }

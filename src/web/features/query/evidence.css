@@ -1,0 +1,13 @@
+.result-panel { min-width: 0; }
+.result-panel .answer, .query-evidence { overflow-wrap: anywhere; }
+.query-evidence blockquote { white-space: pre-wrap; }
+.query-evidence > .locator { margin: 0 0 8px; }
+.query-evidence a { color: var(--accent-dark); }
+.query-evidence-pages { padding: 0; margin: 0 0 8px; list-style: none; }
+.query-evidence-pages li { margin-bottom: 6px; }
+.query-evidence-pages span { color: var(--muted); font-size: 13px; margin-inline-start: 8px; }
+.query-evidence-preview img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+.query-evidence-preview[open] { margin-bottom: 12px; }
+.query-result-warnings, .query-result-coverage { line-height: 1.6; }
+.result-panel .query-result-warnings { margin: 0; padding-inline-start: 28px; }
+.query-result-coverage ul { padding-inline-start: 20px; margin: 8px 0 0; }

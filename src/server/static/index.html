@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>数据中心 · 设备资料查询</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">DATA CENTER / DEVICE QUERY</p>
+          <h1>设备资料查询</h1>
+          <p class="muted">只根据已发布、已核验且当前有权访问的手册回答。</p>
+        </div>
+        <div id="session" class="session-chip">未登录</div>
+      </header>
+
+      <section id="login-panel" class="panel login-panel">
+        <div>
+          <p class="eyebrow">开始使用</p>
+          <h2>登录工作区</h2>
+          <p class="muted">登录后可以恢复自己的查询任务，并打开每条说明的原文定位。</p>
+        </div>
+        <form id="login-form" class="stack">
+          <label>账号<input name="username" autocomplete="username" required /></label>
+          <label>口令<input name="password" type="password" autocomplete="current-password" required /></label>
+          <button>登录</button>
+          <p id="login-error" class="error" role="alert"></p>
+        </form>
+      </section>
+
+      <section id="workspace" class="workspace hidden">
+        <div class="panel query-panel">
+          <div class="section-heading"><div><p class="eyebrow">KNOWLEDGE QUERY</p><h2>描述你要完成的操作</h2></div><button id="logout" class="ghost">退出</button></div>
+          <form id="query-form" class="stack">
+            <label>设备型号（可选）<input name="model" placeholder="例如 H3C ER2100" /></label>
+            <label>问题<textarea name="query" rows="4" placeholder="例如：如何开机？日常维护有哪些注意事项？" required></textarea></label>
+            <button>提交查询</button>
+          </form>
+          <div id="query-state" class="status muted"></div>
+          <button id="refresh-task" class="ghost hidden" type="button">刷新原查询状态</button>
+          <form id="input-form" class="stack hidden">
+            <label>补充设备型号<input name="model" required maxlength="200" /></label>
+            <button>补充并继续原任务</button>
+          </form>
+          <details><summary>我的查询记录</summary><ul id="task-history"></ul></details>
+        </div>
+        <div class="panel result-panel">
+          <div class="section-heading"><div><p class="eyebrow">EVIDENCE</p><h2>结果与出处</h2></div><span id="result-badge" class="badge">等待查询</span></div>
+          <div id="result" class="result-content empty">提交问题后，这里会显示整理说明、版本状态和可核对的原文片段。</div>
+        </div>
+      </section>
+    </main>
+    <script src="/assets/query.js" defer></script>
+  </body>
+</html>

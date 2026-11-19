@@ -14,16 +14,32 @@ RAG 不保证消除幻觉；证据缺失、冲突与解析歧义须显式处理�
 
 ## 当前状态
 
-当前先从三类角色调查现有资料渠道及工作障碍，再确定首期优先级。公式计算与 Excel 保留为 [候选场景](doc/requirements/SPEC.md#11-候选场景公式计算与-excel)，不限定项目全部目标或首期范围。
+进度、实际检查结果、未验证范围与下一步统一维护在 **[项目状态与续跑入口](doc/planning/STATUS.md)**。本 README 保留项目定位、运行方式和文档导航，不重复维护进度快照。
 
-已建立项目工作约定、目录与 Git 忽略规则，并整理 [产品规格草案](doc/requirements/SPEC.md) 与 [实施计划草案](doc/planning/PLAN.md)；尚未实现资料解析、检索、计算、导出或用户界面，暂无启动命令和应用测试。
+首期目标为 [设备操作维护查询](doc/requirements/SPEC.md#13-首期场景设备操作与维护资料查询)：按型号查找有权且已确认适用的资料，核对说明、版本与出处，并明确反馈缺失和冲突。计算填表、多资料对比及报告随后推进。
 
-- [AGENTS.md](AGENTS.md)：后续开发与 Agent 执行约定。
-- [.gitignore](.gitignore)：本地资料、派生数据、产物和凭据的排除规则。
-- [数据库设计](doc/database/数据库设计.md)：表结构、关系、权限、版本与索引生命周期设计草案，尚未执行建表或迁移。
-- [接口设计](doc/api/接口设计.md)：前后端端点、请求与响应、权限和任务状态契约草案，尚未实现或联调。
-- [前后端技术方案](doc/architecture/前后端技术方案.md)：已确定 React + FastAPI，并形成 TypeScript、Vite、Ant Design、SQLAlchemy、Alembic 与 Celery + RabbitMQ 等配套基线；具体版本待验证，尚未搭建应用。
-- [模型与解析方案](doc/architecture/模型与解析方案.md)：已确定 BGE-M3 + MinerU VLM，数据库优先采用 PostgreSQL + pgvector；具体接入设计待审阅，尚未接入服务或安装数据库。
+## 本地运行与检查
+
+先按[安全迁移](doc/development/安全迁移与事故核查.md)显式准备隔离库，应用启动只检查结构；事故默认SQLite已隔离。服务入口为 `python run.py`（或 `uvicorn src.server.app:app`）；配置见 [运行边界](specs/001-device-operation-maintenance-query/operations.md)。默认本地实现与正式技术路线的差距、最近核对结果见项目状态，不据启动命令推断验收通过。
+
+已配置的持久合成试点使用`python -m src.server.pilot serve --port 8879`，包含网页和查询Worker；首次准备、三角色凭据、服务准入及每日备份命令见[持久试点运行入口](doc/development/本地查询执行与验证.md#持久隔离试点入口)。
+
+- 本地服务层回归：`python -m pytest src/server/test_services.py -q`。
+- 会话记忆结构校验：`python -m src.memory.validate`。
+- 数据库迁移：使用 `python -m src.server.migrate plan/apply` 显式目标与前态；完整命令见[安全迁移](doc/development/安全迁移与事故核查.md)。裸Alembic被拒绝。
+- React网页：在 `src/web` 执行 `npm ci`、`npm run typecheck`、`npm run build`；FastAPI提供 `/workspace/query`、`/workspace/manage`、`/workspace/access-review`，详见[前端运行说明](src/web/README.md)。
+
+## 文档入口
+
+工作从[项目状态与续跑入口](doc/planning/STATUS.md)开始，沿其指针进入当前任务；全部主题文档从[doc/README.md](doc/README.md)查找。规范所有权和变更联动见[开发准备基线](specs/001-device-operation-maintenance-query/baseline.md#7-唯一入口与文档维护)，Agent约定见[AGENTS.md](AGENTS.md)。README和Memory不另存“当前进度/下一任务”。
+
+开工、文档变更和交付时运行离线结构检查：
+
+```powershell
+python -m src.tools.project_docs
+```
+
+需求追踪只改[traceability.json](specs/001-device-operation-maintenance-query/traceability.json)，再运行`python -m src.tools.project_docs --write-traceability`。检查不联网、不读取企业原件/数据库、不执行产品测试；通过不等于方案业务确认或真实验收。
 
 ## 项目结构
 
@@ -39,25 +55,33 @@ data-center/
 │   ├── architecture/ # 技术方案与迁移设计
 │   ├── database/   # 数据库设计
 │   └── api/        # 接口设计
-├── src/            # 开发代码（当前仅占位）
-│   └── .gitkeep
+├── src/            # 开发代码
+│   ├── server/     # 首期 FastAPI、模型、服务、迁移与静态查询页
+│   ├── tools/      # 89 份 PDF 非敏感清单生成工具
+│   ├── web/        # React/TypeScript/Vite 三角色工作区
+│   ├── memory/     # Harness Memory 结构校验
+│   └── verify/     # 通用 Harness Verify 模块
+├── .verify/        # 任务契约与 Verify 使用说明
+├── verify.py       # Verify CLI 入口
 ├── .gitattributes
 └── .gitignore
 ```
 
 开发文档从 [doc/README.md](doc/README.md) 进入。目录职责见 [AGENTS.md](AGENTS.md#目录约定)。`data/` 和 `outputs/` 按需在本地创建，不纳入版本管理。
 
+## Verify 验收入口
+
+SPEC → PLAN → IMPLEMENT 之后，可用 `python verify.py --task <任务 ID>` 触发只读验收。
+任务契约位于 `.verify/tasks/`，会读取 AGENTS.md、SPEC、PLAN 和 Contract，优先复用带源码
+哈希的现有证据，必要时执行契约中声明的项目检查。输出 `PASS`、`FAIL`、`BLOCKED` 或
+`INCONCLUSIVE`；只有 `PASS` 返回退出码 0。完整格式与样例见 [.verify/README.md](.verify/README.md)。
+
 ## 下一步
 
-按 [开工前待确定项](doc/planning/开工前待确定项.md) 逐项讨论；已确定的技术栈不重复选型。
-
-1. 了解各角色现有资料渠道、获取障碍和无法完成的办公问题。
-2. 按真实问题选择优先场景，再准备获准资料、输入和人工参考成果。
-3. 细化已确定路线的服务接入，确认具体资料外发范围与其余技术组件。
-4. 实现所选任务从资料依据到办公成果的完整流程，并验证资料缺失、版本冲突及相应任务的错误路径。
+从 [项目状态的下一步](doc/planning/STATUS.md#下一步与依赖) 进入相应任务检查点；恢复时核对当前工作区和证据，按已授权范围推进。
 
 ## 本地数据约定
 
 真实手册与业务输入放在 `data/`，生成产物放在 `outputs/`；这些目录以及索引、日志和环境密钥默认被 Git 忽略。忽略规则不是数据防泄漏机制，提交前仍需检查暂存内容。
 
-仓库仅存放项目代码、文档与经过确认的非敏感样本。已确定的模型、数据库与前后端路线见技术方案；配套组件、支持格式和导出格式尚待实际需求确定。
+仓库仅存放项目代码、文档与经过确认的非敏感样本。已确定的模型、数据库、前后端及配套基线见技术方案；具体版本、首期输入格式集合与接入细节仍需结合获准样本及企业约束验证，后续办公成果的交付要求见 SPEC。

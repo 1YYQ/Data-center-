@@ -1,0 +1,8 @@
+{
+  "task": {"id": "T001-optics-failure", "revision": "demo-fail-1"},
+  "sources": {"governance": ["AGENTS.md"], "spec": ["doc/requirements/SPEC.md"], "plan": ["doc/planning/PLAN.md"], "contract": ["experiments/T001-optics/CASE.md"]},
+  "scope": {"paths": ["experiments/T001-optics"]},
+  "checks": [{"id": "intentionally-failing-assertion", "type": "evidence", "manifest": "experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/run.json", "expected_status": "FAIL", "source_hashes": [{"path": "experiments/T001-optics/CASE.md"}], "evidence": ["experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/run.json"]}],
+  "acceptance": [{"id": "A-demo", "statement": "受控失败样例必须拒绝宣布完成。", "checks": ["intentionally-failing-assertion"], "evidence": ["experiments/T001-optics/evidence/run-20261113T030143Z-6a637007/run.json"]}],
+  "risks": ["这是验证器失败路径演示，不是产品缺陷报告。"]
+}

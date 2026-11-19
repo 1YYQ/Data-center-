@@ -1,0 +1,22 @@
+{
+  "case_id": "T-001",
+  "material_kind": "SIMULATED",
+  "procedure": {"id": "SIM-OPT-001", "version": "V1.0"},
+  "measurements": [
+    {"measurement_id": "M-001", "inputs": {
+      "L": {"value": "800.0", "unit": "mm"},
+      "x1": {"value": "117.2", "unit": "mm"},
+      "x2": {"value": "682.8", "unit": "mm"}
+    }},
+    {"measurement_id": "M-002", "inputs": {
+      "L": {"value": "800.0", "unit": "mm"},
+      "x1": {"value": "117.3", "unit": "mm"},
+      "x2": {"value": "682.7", "unit": "mm"}
+    }},
+    {"measurement_id": "M-003", "inputs": {
+      "L": {"value": "800.0", "unit": "mm"},
+      "x1": {"value": "117.1", "unit": "mm"},
+      "x2": {"value": "682.9", "unit": "mm"}
+    }}
+  ]
+}

@@ -1,0 +1,15 @@
+import { createRoot } from "react-dom/client";
+import ConfigProvider from "antd/es/config-provider";
+import zhCN from "antd/locale/zh_CN";
+import { SessionProvider } from "./session";
+import { QueryApp } from "./features/query/App";
+import { KnowledgeAdmin } from "./features/knowledge/KnowledgeAdmin";
+import { AdminOperations } from "./features/admin/AdminOperations";
+import { ServiceProfiles } from "./features/admin/ServiceProfiles";
+import "./styles.css";
+import "./governance.css";
+import "./approvals.css";
+import "./services.css";
+const path = location.pathname.replace(/\/$/, "");
+const page = path === "/workspace/manage" ? <KnowledgeAdmin /> : path === "/workspace/access-review" ? <AdminOperations /> : path === "/workspace/services" ? <ServiceProfiles /> : path === "/workspace/query" || path === "/workspace" ? <QueryApp /> : <main className="shell"><h1>页面不存在</h1><p><a href="/workspace/query">返回资料查询</a></p></main>;
+createRoot(document.getElementById("root")!).render(<ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: "#315efb", borderRadius: 12, fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif' } }}><SessionProvider>{page}</SessionProvider></ConfigProvider>);

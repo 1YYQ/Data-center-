@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://data-center.local/schemas/device-inventory.json",
+  "type": "object",
+  "required": ["schema_version", "source_root", "files"],
+  "properties": {
+    "schema_version": {"const": "device-inventory.v1"},
+    "source_root": {"type": "string"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file_id", "name", "relative_path", "sha256", "byte_size", "mime_type", "applicability_status", "content_review_status", "publish_status"],
+        "properties": {
+          "file_id": {"type": "string"},
+          "name": {"type": "string"},
+          "relative_path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "byte_size": {"type": "integer", "minimum": 0},
+          "mime_type": {"const": "application/pdf"},
+          "title": {"type": ["string", "null"]},
+          "models": {"type": "array", "items": {"type": "string"}},
+          "revision_label": {"type": ["string", "null"]},
+          "applicability_status": {"enum": ["pending", "confirmed", "conflicted", "withdrawn"]},
+          "content_review_status": {"enum": ["unreviewed", "approved", "blocked"]},
+          "publish_status": {"enum": ["draft", "effective", "superseded", "withdrawn"]},
+          "external_services": {"type": "object", "additionalProperties": {"type": "boolean"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
