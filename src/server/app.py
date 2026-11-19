@@ -9,10 +9,10 @@ from datetime import timezone
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, File, Form, Header, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -1275,15 +1275,22 @@ def create_app(config: Settings | None = None) -> FastAPI:
         return {"task_id": task.id, "status_url": f"/tasks/{task.id}", "status": task.status}
 
     @app.get("/tasks")
-    def list_tasks(request: Request, db: Session = Depends(get_db)) -> dict[str, Any]:
+    def list_tasks(request: Request, db: Session = Depends(get_db),
+                   limit: int = Query(20, ge=1, le=50), offset: int = Query(0, ge=0, le=2147483647)) -> dict[str, Any]:
         actor, _ = _user_or_401(request, db)
-        items = [task_view(task, viewer_user_id=actor.id) if can_read_task(db, actor, task) else {"id": task.id, "kind": task.kind, "status": "access_limited", "next_action": "访问条件已变化"} for task in db.scalars(select(QueryTask).where(QueryTask.owner_user_id == actor.id).order_by(QueryTask.created_at.desc())).all()]
-        shared = db.scalars(select(TaskShare).where(TaskShare.recipient_user_id == actor.id, TaskShare.status == "active")).all()
-        for share in shared:
-            task = db.get(QueryTask, share.task_id)
-            if task and can_read_task(db, actor, task):
+        share = select(TaskShare.id).where(TaskShare.task_id == QueryTask.id,
+            TaskShare.recipient_user_id == actor.id, TaskShare.granted_by == QueryTask.owner_user_id,
+            TaskShare.status == "active", TaskShare.revoked_at.is_(None),
+            or_(TaskShare.expires_at.is_(None), TaskShare.expires_at > utc_now())).exists()
+        candidates = list(db.scalars(select(QueryTask).where(or_(QueryTask.owner_user_id == actor.id, share))
+            .order_by(QueryTask.created_at.desc(), QueryTask.id.desc()).offset(offset).limit(limit + 1)))
+        items = []
+        for task in candidates[:limit]:
+            if can_read_task(db, actor, task):
                 items.append(task_view(task, viewer_user_id=actor.id))
-        return {"items": items}
+            elif task.owner_user_id == actor.id:
+                items.append({"id": task.id, "kind": task.kind, "status": "access_limited", "next_action": "访问条件已变化"})
+        return {"items": items, "next_offset": offset + limit if len(candidates) > limit else None}
 
     @app.get("/tasks/{task_id}")
     def get_task(task_id: str, request: Request, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:

@@ -269,32 +269,59 @@ def _journal_fragment(evidence):
             "source_spans": evidence.source_spans, "asset_refs": evidence.asset_refs}
 
 
-def _journal_source(db, actor, task, identifier):
-    from .chunk_retrieval import validate_child_fragment
+def _journal_sources(db, actor, task, identifiers, *, retain_partial=False):
+    """Replay a journal boundary's evidence together and return current identities."""
+    from .chunk_retrieval import validate_child_fragments
     from .governance import publication_dependency_snapshot
-    if not isinstance(identifier, str):
-        return None
-    evidence = db.get(TaskEvidence, identifier, populate_existing=True)
-    if not evidence or evidence.task_id != task.id or evidence.execution_revision != task.execution_revision:
-        return None
-    fragment = _journal_fragment(evidence)
-    if fragment is None:
-        return None
-    version = db.get(DocumentVersion, evidence.document_version_id, populate_existing=True)
+
+    versions, candidates = {}, {}
+    for identifier in identifiers:
+        if not isinstance(identifier, str):
+            continue
+        evidence = db.get(TaskEvidence, identifier, populate_existing=True)
+        if not evidence or evidence.task_id != task.id or evidence.execution_revision != task.execution_revision:
+            continue
+        fragment = _journal_fragment(evidence)
+        if fragment is None:
+            continue
+        version_id = evidence.document_version_id
+        if version_id not in versions:
+            versions[version_id] = db.get(DocumentVersion, version_id, populate_existing=True)
+        version = versions[version_id]
+        if version and version.selected_chunk_set_id == evidence.chunk_set_id:
+            candidates[identifier] = evidence, fragment
+
+    complete = len(candidates) == len(identifiers)
+    if not candidates or (not complete and not retain_partial):
+        return {}, complete
+
     payload = task.effective_input
-    if (not version or version.selected_chunk_set_id != evidence.chunk_set_id
-            or not validate_child_fragment(db, actor, fragment, model=payload.get("model"),
-                                           kb_ids=payload.get("knowledge_base_ids", []),
-                                           context={key: payload.get(key) for key in ("level", "category", "need_class")})):
-        return None
-    dep = fragment["dependencies"]
-    return {"evidence_id": evidence.id, "evidence_row_hash": _snapshot(evidence)["row_digest"],
+    scope = {"model": payload.get("model"), "kb_ids": payload.get("knowledge_base_ids", []),
+             "context": {key: payload.get(key) for key in ("level", "category", "need_class")}}
+    fragments = [fragment for _, fragment in candidates.values()]
+    if not validate_child_fragments(db, actor, fragments, **scope):
+        if not retain_partial or len(candidates) == 1:
+            return {}, False
+        # Keep provable references in the quarantined manifest. A failed batch
+        # cannot become a complete journal through these individual reads.
+        complete = False
+        candidates = {identifier: (evidence, fragment) for identifier, (evidence, fragment) in candidates.items()
+                      if validate_child_fragments(db, actor, [fragment], **scope)}
+
+    sources, publication_hashes = {}, {}
+    for identifier, (evidence, fragment) in candidates.items():
+        version_id = evidence.document_version_id
+        if version_id not in publication_hashes:
+            publication_hashes[version_id] = fingerprint(publication_dependency_snapshot(db, versions[version_id]))
+        dep = fragment["dependencies"]
+        sources[identifier] = {"evidence_id": evidence.id, "evidence_row_hash": _snapshot(evidence)["row_digest"],
             "source_binding_hash": fragment["source_binding_hash"], "fragment_hash": fingerprint(fragment),
-            "version_id": version.id, "parse_run_id": fragment["parse_run_id"], "ir_hash": fragment["ir_hash"],
+            "version_id": version_id, "parse_run_id": fragment["parse_run_id"], "ir_hash": fragment["ir_hash"],
             "block_id": evidence.block_id, "chunk_id": evidence.chunk_id, "chunk_set_id": evidence.chunk_set_id,
-            "publication_hash": fingerprint(publication_dependency_snapshot(db, version)),
+            "publication_hash": publication_hashes[version_id],
             **{name: dep[name] for name in ("source_qc_ref", "collection_qc_ref", "review_set_id", "publication_event_id", "generation_id",
                                            "generation_manifest_hash", "embedding_profile_id", "group_ref", "group_hash", "mapping_hash")}}
+    return sources, complete
 
 
 def _journal_snapshot(db, config, row):
@@ -386,6 +413,7 @@ def _journal_dependencies(db, actor, task, run, inherited=None):
         for key, target in (("sources", sources), ("projections", projections), ("model_calls", model_calls), ("tools", tools)):
             target.update(inherited[key])
     version_ids = {record["version_id"] for record in sources.values()}
+    references = {}
     complete = True
 
     def remember(evidence_id, expected=None):
@@ -393,29 +421,9 @@ def _journal_dependencies(db, actor, task, run, inherited=None):
         if not isinstance(evidence_id, str):
             complete = False
             return
-        if evidence_id not in sources:
-            sources[evidence_id] = _journal_source(db, actor, task, evidence_id)
-        source = sources[evidence_id]
-        if source is None:
-            complete = False
-        elif expected is not None:
-            old = expected.get("evidence")
-            publication = expected.get("publication")
-            binding = expected.get("source_binding_hash")
-            projected_fragment = expected.get("fragment")
-            if not isinstance(projected_fragment, dict):
-                ctx = expected.get("fragment_source_context")
-                if isinstance(ctx, dict):
-                    projected_fragment = ctx.get("fragment", ctx)
-            projected_dependency = projected_fragment.get("dependencies") if isinstance(projected_fragment, dict) else None
-            if (not isinstance(old, dict) or old.get("row_digest") != source["evidence_row_hash"]
-                    or not isinstance(publication, dict) or publication.get("digest") != source["publication_hash"]
-                    or binding != source["source_binding_hash"] or not isinstance(projected_dependency, dict)
-                    or projected_fragment.get("chunk_id") != source["chunk_id"]
-                    or projected_dependency.get("generation_manifest_hash") != source["generation_manifest_hash"]):
-                complete = False
-        if source:
-            version_ids.add(source["version_id"])
+        expectations = references.setdefault(evidence_id, [])
+        if expected is not None:
+            expectations.append(expected)
 
     calls = db.scalars(select(ModelCallAdmission).where(ModelCallAdmission.run_id == run.id)
                        .order_by(ModelCallAdmission.id).execution_options(populate_existing=True)).all()
@@ -463,8 +471,35 @@ def _journal_dependencies(db, actor, task, run, inherited=None):
                 version_ids.add(metadata["version_id"])
             # Version-only tool receipts cannot establish the consumed source.
             remember(metadata.get("evidence_id"), metadata)
+
+    new_ids = [evidence_id for evidence_id in references if evidence_id not in sources]
+    current, sources_complete = _journal_sources(db, actor, task, new_ids, retain_partial=True)
+    sources.update(current)
+    complete = complete and sources_complete
+    for evidence_id, expectations in references.items():
+        source = sources.get(evidence_id)
+        if source is None:
+            complete = False
+            continue
+        version_ids.add(source["version_id"])
+        for expected in expectations:
+            old = expected.get("evidence")
+            publication = expected.get("publication")
+            binding = expected.get("source_binding_hash")
+            projected_fragment = expected.get("fragment")
+            if not isinstance(projected_fragment, dict):
+                ctx = expected.get("fragment_source_context")
+                if isinstance(ctx, dict):
+                    projected_fragment = ctx.get("fragment", ctx)
+            projected_dependency = projected_fragment.get("dependencies") if isinstance(projected_fragment, dict) else None
+            if (not isinstance(old, dict) or old.get("row_digest") != source["evidence_row_hash"]
+                    or not isinstance(publication, dict) or publication.get("digest") != source["publication_hash"]
+                    or binding != source["source_binding_hash"] or not isinstance(projected_dependency, dict)
+                    or projected_fragment.get("chunk_id") != source["chunk_id"]
+                    or projected_dependency.get("generation_manifest_hash") != source["generation_manifest_hash"]):
+                complete = False
     return {"schema": JOURNAL_SOURCE_SCHEMA, "state": "complete" if complete else "incomplete",
-            "context": _journal_context(db, task), "sources": {key: val for key, val in sources.items() if val is not None},
+            "context": _journal_context(db, task), "sources": sources,
             "projections": projections, "model_calls": model_calls, "tools": tools}, sorted(version_ids)
 
 
@@ -473,9 +508,11 @@ def _journal_dependencies_current(db, dependencies, task, actor):
             or dependencies.get("state") != "complete" or dependencies.get("context") != _journal_context(db, task)
             or any(not isinstance(dependencies.get(key), dict) for key in ("sources", "projections", "model_calls", "tools"))):
         return False
-    for identifier, source in dependencies["sources"].items():
-        if not isinstance(source, dict) or source != _journal_source(db, actor, task, identifier):
-            return False
+    if any(not isinstance(source, dict) for source in dependencies["sources"].values()):
+        return False
+    current, complete = _journal_sources(db, actor, task, dependencies["sources"])
+    if not complete or dependencies["sources"] != current:
+        return False
     for key, type_ in (("projections", ModelInputProjection), ("model_calls", ModelCallAdmission), ("tools", ToolInvocation)):
         for identifier, expected in dependencies[key].items():
             row = db.get(type_, identifier, populate_existing=True)

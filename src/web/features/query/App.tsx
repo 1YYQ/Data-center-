@@ -49,10 +49,25 @@ function QueryWorkspace() {
   const saved = useRef<Saved>({ owner, task: null, pendingSubmit: null, pendingInput: null }), active = useRef(true), timer = useRef<ReturnType<typeof setTimeout> | null>(null), sequence = useRef(0);
   const [feedbackTask, setFeedbackTask] = useState<string | null>(null);
   const [retryTarget, setRetryTarget] = useState<{ task: string; etag: string } | null>(null);
+  const [historyNext, setHistoryNext] = useState<number | null>(null), [historyBusy, setHistoryBusy] = useState(false), [historyError, setHistoryError] = useState("");
+  const historyOpen = useRef(false), historySequence = useRef(0);
   const pendingRetry = api.pendingCommands().find(command => command.method === "POST" && retryPath.test(command.path));
   function save() { if (api.owner === owner) sessionStorage.setItem(storage, JSON.stringify(saved.current)); }
   function clearTimer() { if (timer.current) clearTimeout(timer.current); }
-  async function loadHistory() { const response = await api.get<{ items: Task[] }>("/tasks"); if (active.current) setHistory(response.items.filter(task => task.kind === "query" || task.status === "access_limited")); }
+  async function loadHistory(more = false) {
+    const seq = ++historySequence.current, offset = more ? historyNext : 0;
+    if (offset === null) return;
+    setHistoryBusy(true); setHistoryError("");
+    try {
+      const response = await api.get<{ items: Task[]; next_offset: number | null }>(`/tasks?limit=5&offset=${offset}`);
+      if (!active.current || seq !== historySequence.current) return;
+      const rows = response.items.filter(task => task.kind === "query" || task.status === "access_limited");
+      setHistory(previous => [...new Map((more ? [...previous, ...rows] : rows).map(task => [task.id, task])).values()]);
+      setHistoryNext(response.next_offset);
+    } catch (error) {
+      if (active.current && seq === historySequence.current && !(error instanceof StaleSessionError)) setHistoryError(errorMessage(error));
+    } finally { if (active.current && seq === historySequence.current) setHistoryBusy(false); }
+  }
   function showError(error: unknown) {
     if (!active.current || error instanceof StaleSessionError) return;
     setResult(null); setRequest(null); setFeedbackTask(null); setRetryTarget(null); setBadge("查询未完成"); setStatus(errorMessage(error) + " 原任务已保留，可刷新状态。"); setRecoverable(true);
@@ -68,7 +83,7 @@ function QueryWorkspace() {
       return;
     }
     if (["pending", "running"].includes(progress.status)) {
-      setStatus("查询处理中，关闭或刷新网页不会重复提交。"); setBadge("正在查询");
+      setStatus(progress.status === "pending" ? "查询已保存，正在等待执行。关闭或刷新不会重复提交。" : "查询处理中，关闭或刷新网页不会重复提交。"); setBadge(progress.status === "pending" ? "查询已排队" : "正在查询");
       timer.current = setTimeout(() => void poll().catch(showError), 1000);
       return;
     }
@@ -76,7 +91,7 @@ function QueryWorkspace() {
     if (task.retry_eligible && etag) setRetryTarget({ task: taskId, etag });
     setFeedbackTask(task.conversation_id && profile!.capabilities.includes("feedback.read_own") ? task.id : null);
     if (["pending", "running"].includes(task.status)) {
-      setStatus("查询处理中，关闭或刷新网页不会重复提交。"); setBadge("正在查询");
+      setStatus(task.status === "pending" ? "查询已保存，正在等待执行。关闭或刷新不会重复提交。" : "查询处理中，关闭或刷新网页不会重复提交。"); setBadge(task.status === "pending" ? "查询已排队" : "正在查询");
       timer.current = setTimeout(() => void poll().catch(showError), 1000);
     } else if (task.status === "waiting_input") {
       const response = await api.get<{ items: InputRequest[] }>(`/tasks/${id(taskId)}/input-requests`); if (!current()) return;
@@ -84,7 +99,7 @@ function QueryWorkspace() {
       setRequest(open); setStatus(open?.reason || "需要补充设备条件"); setBadge("等待补充");
     } else if (task.status === "succeeded") {
       const response = await api.get<Result>(`/tasks/${id(taskId)}/result`); if (!current()) return;
-      setResult(response); setBadge(resultBadges[response.result_status] || "需要补充或人工复核"); setStatus("结果已保存，请逐条核对版本、出处和警告。"); saved.current.pendingInput = null; save(); await loadHistory();
+      setResult(response); setBadge(resultBadges[response.result_status] || "需要补充或人工复核"); setStatus("结果已保存，请逐条核对版本、出处和警告。"); saved.current.pendingInput = null; save(); if (historyOpen.current) await loadHistory();
     } else { setStatus(task.next_action || "访问条件已变化，请确认资料权限或联系管理员。"); setBadge("查询尚未完成"); }
   }
   async function submitOriginal() {
@@ -125,9 +140,8 @@ function QueryWorkspace() {
       historyReplace();
     }
     if (saved.current.pendingSubmit) { setQuery(saved.current.pendingSubmit.query); setModel(saved.current.pendingSubmit.model || ""); setStatus("上次提交结果待核对，请恢复原提交读取回执。"); setRecoverable(true); }
-    void loadHistory().catch(showError);
     if (saved.current.task && !saved.current.pendingSubmit) void poll().catch(showError);
-    return () => { active.current = false; sequence.current++; clearTimer(); };
+    return () => { active.current = false; sequence.current++; historySequence.current++; clearTimer(); };
   }, [owner]);
   function historyReplace() { window.history.replaceState(null, "", "/workspace/query"); }
   return <section className="workspace"><div className="panel query-panel"><div className="section-heading"><div><p className="eyebrow">KNOWLEDGE QUERY</p><h2>描述你要完成的操作</h2></div></div><fieldset className="operation-fields" disabled={op.busy} aria-busy={op.busy}>
@@ -136,7 +150,11 @@ function QueryWorkspace() {
       const payload: QueryInput = { query, model: model || null, mode: "retrieve" };
       if (saved.current.pendingSubmit && JSON.stringify(saved.current.pendingSubmit) !== JSON.stringify(payload)) throw Error("上次提交结果待核对，请先恢复原提交。");
       saved.current.pendingSubmit ||= payload; save(); clearTimer(); setResult(null); setRequest(null); setStatus("正在检查适用版本和权限…");
-      try { await submitOriginal(); } catch (error) { showError(error); throw error; }
+      try { await submitOriginal(); } catch (error) {
+        if (error instanceof HttpError && error.status === 429) { setBadge("尚未提交"); setStatus("当前查询较多，本次未创建新任务。请稍后再提交。"); setRecoverable(Boolean(saved.current.task)); }
+        else showError(error);
+        throw error;
+      }
     }); }}><label>设备型号（可选）<input value={model} onChange={event => setModel(event.target.value)} placeholder="例如 H3C ER2100" maxLength={200} /></label><label>问题<textarea value={query} onChange={event => setQuery(event.target.value)} rows={4} required placeholder="例如：如何开机？日常维护有哪些注意事项？" /></label><button disabled={Boolean(pendingRetry)}>提交查询</button></form> : <p role="alert">当前账号没有资料查询权限。</p>}
     <p className="status muted" role="status">{status}</p>
     {recoverable && <button className="ghost" type="button" onClick={() => void op.perform(async () => { try { await (saved.current.pendingSubmit ? submitOriginal() : saved.current.pendingInput ? sendInput() : poll()); } catch (error) { showError(error); throw error; } })}>{saved.current.pendingSubmit ? "恢复原提交" : saved.current.pendingInput ? "恢复原补充回执" : "刷新原查询状态"}</button>}
@@ -146,7 +164,7 @@ function QueryWorkspace() {
       if (saved.current.pendingInput && JSON.stringify(saved.current.pendingInput) !== JSON.stringify(pending)) throw Error("原补充结果待核对，请先恢复原补充回执。");
       saved.current.pendingInput ||= pending; save(); try { await sendInput(); } catch (error) { showError(error); throw error; }
     }); }}><label>补充设备型号<input name="model" required maxLength={200} /></label><button>补充并继续原任务</button></form>}
-    <details><summary>我的查询记录</summary><ul>{history.map(task => <li key={task.id}><button className="ghost" type="button" disabled={Boolean(pendingRetry)} onClick={() => void op.perform(async () => { if (saved.current.pendingSubmit || saved.current.pendingInput || pendingRetry) throw Error("请先核对上次操作回执。"); saved.current.task = task.id; save(); await poll(); })}>{task.input?.query || "已保存的查询"}</button></li>)}</ul>{!history.length && <p className="muted">暂无查询记录。</p>}{profile!.capabilities.includes("task.share") && <p className="locator">用于接收分享的用户编号 <code>{owner}</code></p>}</details><Status message={op.message} bad={op.bad} /></fieldset></div>
+    <details onToggle={event => { historyOpen.current = event.currentTarget.open; if (historyOpen.current) void loadHistory(); }}><summary>我的查询记录</summary><ul>{history.map(task => <li key={task.id}><button className="ghost" type="button" disabled={Boolean(pendingRetry)} onClick={() => void op.perform(async () => { if (saved.current.pendingSubmit || saved.current.pendingInput || pendingRetry) throw Error("请先核对上次操作回执。"); saved.current.task = task.id; save(); await poll(); })}>{task.input?.query || "已保存的查询"}</button></li>)}</ul>{historyBusy && <p role="status">正在读取查询记录…</p>}{!history.length && !historyBusy && !historyError && <p className="muted">暂无查询记录。</p>}{historyError && <p role="alert">{historyError}</p>}<button type="button" className="ghost" disabled={historyBusy} onClick={() => void loadHistory()}>刷新查询记录</button>{historyNext !== null && <button type="button" className="ghost" disabled={historyBusy} onClick={() => void loadHistory(true)}>加载更多查询记录</button>}{profile!.capabilities.includes("task.share") && <p className="locator">用于接收分享的用户编号 <code>{owner}</code></p>}</details><Status message={op.message} bad={op.bad} /></fieldset></div>
     <section className="panel result-panel">
       <div className="section-heading"><div><p className="eyebrow">EVIDENCE</p><h2>结果与出处</h2></div><span className="badge">{badge}</span></div>
       {result ? <QueryResult result={result} taskId={result.task?.id || saved.current.task || ""} hasFeedback={Boolean(feedbackTask)} />

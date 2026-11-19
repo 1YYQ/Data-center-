@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from . import governance as g
 from .governance_models import GovernanceEvidence
-from .models import BlockRelation, ChunkSet, ContentBlock, DocumentVersion, ParseArtifact, ParseRun, User
+from .models import BlockRelation, ChunkSet, ContentBlock, DocumentPage, DocumentVersion, ParseArtifact, ParseRun, User
 from .parsing.artifacts import read_artifact
 from .parsing.processing import (assert_structured_projection, load_structured_ir, projection_fingerprint,
     relation_review_state, run_source_qc, source_confirmation_scope, source_qc_is_current, source_verification, structure_parse_run)
@@ -81,3 +81,33 @@ def test_frozen_relationship_change_invalidates_source_qc_and_business_proof(loc
         assert source_verification(db, run)["state"] == "pending"
         # No attempt to repair/rewrite the immutable structured artifact.
         assert read_artifact(db, db.get(ParseArtifact, run.ir_artifact_id), fixture.config)
+
+
+def test_source_confirmation_keeps_legacy_projection_digest_and_one_row_snapshot(local_parse):
+    """Preserve the signed field/order contract while removing duplicate reads."""
+    from sqlalchemy import event
+    from .parsing.ir_projection import PAGE_FIELDS, BLOCK_FIELDS
+    from .parsing.processing import RELATION_FIELDS
+    from .parsing.local_pipeline import fingerprint
+    run_id = source_ready(local_parse)
+    with local_parse.app.state.session_factory() as db:
+        run = db.get(ParseRun, run_id)
+        pages = db.scalars(select(DocumentPage).where(DocumentPage.parse_run_id == run_id).order_by(DocumentPage.file_page)).all()
+        blocks = db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run_id).order_by(ContentBlock.ordinal)).all()
+        relations = db.scalars(select(BlockRelation).where(BlockRelation.parse_run_id == run_id).order_by(BlockRelation.id)).all()
+        old_digest = fingerprint({'pages': [{key: getattr(row, key) for key in PAGE_FIELDS} for row in pages],
+            'blocks': [{key: getattr(row, key) for key in BLOCK_FIELDS} for row in blocks],
+            'relations': [{key: getattr(row, key) for key in RELATION_FIELDS} for row in relations]})
+        statements = []
+        def observe(conn, cursor, statement, *args):
+            statements.append(statement)
+        event.listen(local_parse.app.state.engine, 'before_cursor_execute', observe)
+        try:
+            scope = source_confirmation_scope(db, run)
+        finally:
+            event.remove(local_parse.app.state.engine, 'before_cursor_execute', observe)
+        assert scope['source_projection_hash'] == old_digest
+        assert len(statements) == 3
+        blocks[0].text_content += ' SYNTHETIC mutation'
+        db.commit()
+        assert source_confirmation_scope(db, run)['source_projection_hash'] != old_digest

@@ -18,6 +18,8 @@
 
 ## 当前本地实施
 
+本轮并发超时修复与本地容量验证已完成，DONE/VERIFIED_LOCAL_SYNTHETIC。根因为同次日志逐证据重复全源复核、隐藏历史无界读取叠加SDK整轮时限；已改批量复核、保持原指纹的单次行投影、按需历史分页和事务性有界受理。实际BGE/SDK1/2/4波次、10页整库单消费者4项排队、正式Chrome及一次最终真实百炼混合读取均通过；权限、签认、证据、未知与预算围栏及20s/25s/90s时限未降低。日常试点固定1项执行＋3项等待，第5项明确拒绝；短时4路通过不能作为持续4路或89份手册容量承诺。数值和样本边界见[metrics](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#本地并发与容量2026-11-19)，运行限制见[operations](../../specs/001-device-operation-maintenance-query/operations.md#本地容量边界2026-11-19)。原持久8879已恢复、Pi rev5，前轮原任务/预算/快照保全；六个临时PG均清理、默认SQLite哈希不变、备份继续Disabled。最终候选/已批准Git分支回溯见[tasks](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)和outputs/pilot-capacity/2026-11-19/candidate-final.json。本授权内无待推进工程项，真实组织验收仍只暂停其依赖链。
+
 三角色核心模拟A–F已VERIFIED_LOCAL_SYNTHETIC：异常和补型号、草稿/版本冲突、回答分享/资料撤权及缓存清除、真实离线解析与校正/独立QC、服务与原批次恢复均有分段网页/HTTP证据。最终qwen3.8-flash＋实际Pi SDK＋本地BGE/PGvector在同一持久原任务完成第2修订，六条来源和原PDF核对通过，累计五份真实回执及原预算保留；冷模型准备已前移至接受查询之前。权限/版本场景的正例使用生产child工具与真实回环回执，不能称每个场景均重跑SDK；并行回环短时限失败保留，不作生产容量达标结论。当前授权内无剩余就绪项；完整企业A–F仍EXTERNAL_PENDING，扩展场景和真实签认不因核心模拟通过而关闭。源/证据/下一入场以tasks顶部及本轮验收为准。
 
 最新用户调整：暂停本机新增备份/恢复演练，改用Git回溯代码和文档。已实际安装且触发一次的自有每日任务现为Disabled；唯一现有备份约0.45MiB，未新增或删除。完整同试点恢复尚未执行，按用户要求DEFERRED；Git不替代数据库/原PDF等运行数据恢复。查询闭环和Git交付继续，具体检查点见tasks顶部。

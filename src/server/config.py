@@ -50,10 +50,13 @@ class Settings:
     local_bge_model_dir: Path | None = _optional_path("DATACENTER_LOCAL_BGE_MODEL_DIR")
     auxiliary_operations: tuple[str, ...] = _auxiliary_operations()
     query_service_mode: str = _query_service_mode()
+    query_max_inflight: int = int(os.getenv("DATACENTER_QUERY_MAX_INFLIGHT", "0"))
 
     def __post_init__(self) -> None:
         if self.query_service_mode not in {"local", "selected_service"}:
             raise ValueError("query_service_mode must be local or selected_service")
+        if type(self.query_max_inflight) is not int or not 0 <= self.query_max_inflight <= 64:
+            raise ValueError("query_max_inflight must be an integer from 0 to 64")
 
     def ensure_dirs(self) -> None:
         self.storage_dir.mkdir(parents=True, exist_ok=True)

@@ -27,13 +27,21 @@ def page_binding(row):
     return fingerprint({key: getattr(row, key) for key in PAGE_FIELDS})
 
 
-def projection_fingerprint(db, run_id):
+def _projection_rows(db, run_id):
     pages = db.scalars(select(DocumentPage).where(DocumentPage.parse_run_id == run_id).order_by(DocumentPage.file_page)).all()
     blocks = db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run_id).order_by(ContentBlock.ordinal)).all()
     relations = db.scalars(select(BlockRelation).where(BlockRelation.parse_run_id == run_id).order_by(BlockRelation.id)).all()
+    return pages, blocks, relations
+
+
+def _projection_fingerprint(pages, blocks, relations):
     return fingerprint({"pages": [{key: getattr(row, key) for key in PAGE_FIELDS} for row in pages],
         "blocks": [{key: getattr(row, key) for key in BLOCK_FIELDS} for row in blocks],
         "relations": [{key: getattr(row, key) for key in RELATION_FIELDS} for row in relations]})
+
+
+def projection_fingerprint(db, run_id):
+    return _projection_fingerprint(*_projection_rows(db, run_id))
 
 
 def checker_signature():
@@ -185,12 +193,10 @@ def source_qc_is_current(db, run):
 def source_confirmation_scope(db, run):
     """Exact, read-only options for recording an actual person's statement."""
     from ..governance import block_binding
-    blocks = db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run.id)).all()
-    relations = db.scalars(select(BlockRelation).where(BlockRelation.parse_run_id == run.id)).all()
-    pages = db.scalars(select(DocumentPage).where(DocumentPage.parse_run_id == run.id)).all()
+    pages, blocks, relations = _projection_rows(db, run.id)
     return {"parse_run_id": run.id, "ir_artifact_id": run.ir_artifact_id,
         "source_qc_ref": run.stage_checkpoint.get("outputs", {}).get("source_qc"),
-        "source_projection_hash": projection_fingerprint(db, run.id),
+        "source_projection_hash": _projection_fingerprint(pages, blocks, relations),
         "block_bindings": {row.id: block_binding(row) for row in blocks if row.structure_role == "leaf"},
         "container_bindings": {row.id: row.content_hash for row in blocks if row.structure_role == "container"},
         "observation_bindings": {row.id: row.content_hash for row in blocks if row.structure_role == "observation"},

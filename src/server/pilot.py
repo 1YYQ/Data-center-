@@ -87,7 +87,7 @@ def load_settings(config_path: Path | str = DEFAULT_CONFIG) -> Settings:
     settings = Settings(database_url=_database_url(config), storage_dir=storage,
         local_bge_model_dir=model_dir,
         local_bge_tokenizer=Path(tokenizer) if tokenizer else None,
-        query_service_mode="selected_service")
+        query_service_mode="selected_service", query_max_inflight=4)
     settings.ensure_dirs()
     return settings
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import timezone
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from .models import AuthSession, AuthorizationGrant, Document, DocumentVersion, KnowledgeBase, QueryTask, TaskAttempt, TaskEvidence, TaskOutbox, TaskStep, User, utc_now
@@ -93,6 +93,7 @@ def accept_query(db: Session, actor: User, session: AuthSession, payload: dict, 
             "request_items": freeze_request_items(payload["query"], effective.get("model"))})
     db.add(task)
     db.flush()
+    _admit_query(db, task)
     step = TaskStep(task_id=task.id, step_key="query", position=1, kind="knowledge_query", status="pending", attempt_count=0)
     db.add(step)
     db.flush()
@@ -161,7 +162,34 @@ def respond_model(db, actor, task, request, value):
     audit(db, actor.id, "task.input_resolved", "task", task.id, request_id=request.id)
 
 
+def _admit_query(db, task):
+    """Bound accepted local work atomically, before any new dispatch or pin.
+
+    Callers have already flushed/written their own task, which serializes
+    SQLite writers. PostgreSQL uses a database-local transaction lock and a
+    fresh READ COMMITTED count. A denial rolls back the whole caller command.
+    """
+    config = db.info.get("settings")
+    limit = getattr(config, "query_max_inflight", 0)
+    if not limit or task.kind != "query":
+        return
+    connection = db.connection()
+    if connection.dialect.name == "postgresql":
+        if connection.get_isolation_level() != "READ COMMITTED":
+            raise SafeError("QUERY_CAPACITY_UNAVAILABLE", "查询受理暂不可用，请稍后核对原操作。", 503)
+        db.execute(text("SELECT pg_advisory_xact_lock(731824195)"))
+    elif connection.dialect.name == "sqlite":
+        db.execute(update(QueryTask).where(QueryTask.id == task.id).values(revision=QueryTask.revision))
+    else:
+        raise SafeError("QUERY_CAPACITY_UNAVAILABLE", "查询受理暂不可用，请稍后核对原操作。", 503)
+    queued = db.scalar(select(func.count()).select_from(QueryTask).where(QueryTask.id != task.id,
+        QueryTask.kind == "query", QueryTask.status.in_(("pending", "running"))))
+    if queued >= limit:
+        raise SafeError("QUERY_CAPACITY_FULL", "当前查询较多，请稍后再提交或恢复原查询。此次受理未完成。", 429)
+
+
 def _enqueue(db, task, *, previous_status):
+    _admit_query(db, task)
     step = db.scalar(select(TaskStep).where(TaskStep.task_id == task.id, TaskStep.step_key == "query")
                      .with_for_update().execution_options(populate_existing=True))
     if step.lease_owner:
