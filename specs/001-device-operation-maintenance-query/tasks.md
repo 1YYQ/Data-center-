@@ -10,13 +10,17 @@
 
 最新用户范围调整：因本机存储考虑，暂停新增本地备份及完整恢复演练，转为Git代码/文档回溯。自有每日任务`DataCenter-Pilot-Backup-9b8f1c1c0bcb`已确认Disabled/Enabled=false，`schedule-user-disabled.json`为证；已生成首份完整75表/12文件备份约465063字节，保留原状，不再创建新快照，不未经授权删除。首份实际触发退出0为已发生事实，完整同持久试点恢复尚未执行且按最新要求DEFERRED，不伪称通过。查询闭环和代码/文档版本保存继续执行；下面初始范围中备份/恢复后续动作由本条取代。
 
-本轮百炼qwen3.8-flash受控网关＋真实SDK＋本地BGE-M3/PGvector＋持久三角色试点查询为VERIFIED_LOCAL_SYNTHETIC，已在实际Chrome完成一次正式答案及原PDF回查。每日任务安装/触发本身已验证，后依用户最新要求停用，后续备份/恢复DEFERRED。Git代码/文档回溯正在最终入库；不将真实供应商调用升级为真实企业G1/人员签认。复用源QC/完整代际/TaskEvidence/AnswerPlan/双账本和安全迁移，不降门禁。
+本轮百炼qwen3.8-flash受控网关＋真实SDK＋本地BGE-M3/PGvector＋持久三角色试点查询为VERIFIED_LOCAL_SYNTHETIC，已在实际Chrome完成一次正式答案及原PDF回查。每日任务安装/触发本身已验证，后依用户最新要求停用，后续备份/恢复DEFERRED。Git代码/文档回溯已上传指定新分支并核对远端；不将真实供应商调用升级为真实企业G1/人员签认。复用源QC/完整代际/TaskEvidence/AnswerPlan/双账本和安全迁移，不降门禁。
 
 本轮中间检查点：BGE完整实际PDF/HTTP/CPU批次账本/PGvector语义查询与原PDF回查已通过（`outputs/annotated-pilot/2026-11-19/embedding/app-integration/bge-closed-loop.xml`），既有适配/服务回归113项通过；百炼受控网关真实SDK回环正负2项通过，外网完整混合查询由唯一持久试点串联；完整应用SQLite/PG备份恢复与迁移17项通过，独立审查三组P2已修复，`outputs/pilot-runtime/2026-11-19/path-guards-final.xml`验证路径保护2项通过，`routing.xml`验证网页默认选用可信服务无静默回退。中间BGE测试夹具浮点序列化/缺import/缺真实原件导致的失败及pytest缺临时父目录setup错误均保留，不放宽读权限，不累加失败候选数量冒充最终验收。
 
 持久串联结果：`configure-sdk-final.json`绑定Pi rev3及原完整BGE代际。真实Chrome任务`a3399359-108c-446d-abdd-6ae965a31b1c`一次POST成功，3份百炼HTTP200/received/用量回执对应search→validate→deliver；真实CPU BGE/PGvector审计为`query.vector_retrieved`、1024维、2候选/6证据，正式快照保留两步、警告及5Pa，原PDF SHA一致。实际截图已查看，0页面异常，见`outputs/pilot-runtime/2026-11-19/browser/result.json`、`final-query.png`及`live-query-ledger.json`。本机服务`http://127.0.0.1:8879/workspace/query`，凭据只用本地`python -m src.server.pilot credentials --show`查看。准入自检有效期1小时，过期安全阻断，不安排自动付费续测。
 
 修复与失败保留：首次Chrome任务`475109df-65dc-4455-968e-f2ccdf2c2f07`的8次HTTP200回执和已用预算不变，未伪造正式快照；根因为模型给无参工具附加字段导致SDK拒绝。仅在严格授权search/validate阶段采用服务端冻结参数，delivery不变，原始SSE不改；同执行重复投影防止无进展继续付费，未知跨整个task围栏，已知显式重试可在新执行修订使用剩余额度。独立复核发现的跨修订误挡已修复，真实SDK离线回放及PG最终节点3通过/1显式live跳过（`frozen-tool-replay-final.xml`），该跳过由本轮实际持久Chrome补充真实调用证据。`browser-first-failed/`、中间stale绑定失败及配置修订/阶段恢复日志保留，不能累计为通过。
+
+最终交付与续跑：当前Node原生套件10通过/0失败/0跳过，见`node-final-unrestricted.log`；默认沙箱子进程/回环夹具超时的`node-final.log`单独保留，不改超时或跳测试。文档检查1174链接/71节点通过、Memory结构及Python编译通过。首次将已有未提交项目基线纳入Git时，raw diff-check报告既有Markdown换行、冻结v1 SQL空白和旧EOF空行，保留兼容fixture字节，不冒充零格式告警。暂存扫描329文件/4606438字节，无实际API Key/DB密码/私钥/运行数据。已获用户对具体远端和分支明确批准，提交`e0d80b84ddabb3497f076115dedd88fac5f2ad54`推送到`https://github.com/1YYQ/Data-center-`的`codex/pilot-query-20261119`且ls-remote一致；不强推/改main。该提交仅含代码、配置示例、文档和非敏感样例，`.agents/`及既有本地生成证据保留工作区。最后状态记录与候选/远端回执在`outputs/pilot-runtime/2026-11-19/`，Git不是运行数据备份。
+
+本轮调整后范围已交付，无需再说“继续”。下游真实G1/真实业务A–F仅在其资料与人员证据就绪后开展；本轮未发企业内容、未伪造真实签认、不自动续付费自检，未继续用户暂停的备份/恢复。
 
 允许现存本地模型推理、有限真实百炼合成内容调用、必要代码/配置/隔离库及已批准每日备份任务；禁止企业原文外发、事故默认SQLite及其别名、真实人员/业务签认伪造、自动purge或未授权部署。使用独立持久试点库/存储，真实API Key只从环境读取；数据库密码按现有本机容器环境内存引用。源库与私有文件备份、恢复验证和调度都必须绑定同一明确试点配置。证据目录`outputs/pilot-runtime/2026-11-19/`；`before.json`记录基准/边界，工作区原有混合变更保留。
 

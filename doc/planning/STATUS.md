@@ -20,7 +20,7 @@
 
 最新用户调整：暂停本机新增备份/恢复演练，改用Git回溯代码和文档。已实际安装且触发一次的自有每日任务现为Disabled；唯一现有备份约0.45MiB，未新增或删除。完整同试点恢复尚未执行，按用户要求DEFERRED；Git不替代数据库/原PDF等运行数据恢复。查询闭环和Git交付继续，具体检查点见tasks顶部。
 
-百炼真实SDK/网页查询＋本地BGE实际向量检索＋持久三角色试点已VERIFIED_LOCAL_SYNTHETIC：实际Chrome一次受理，3份真实百炼回执、实际CPU BGE/1024维PGvector、6条完整证据、正式答案及原PDF哈希均核对通过。配置恢复、SDK无参工具拒绝、回执阶段和并发付费围栏已修复并保留失败记录。当前试点位于`http://127.0.0.1:8879/workspace/query`，精确任务、模型/代际/配置、原始证据和候选见tasks顶部与`outputs/pilot-runtime/2026-11-19/`。每日任务安装/实际触发已通过，随后按最新用户要求Disabled；同持久试点完整恢复未执行、DEFERRED。Git代码/文档回溯进入最终入库；事故默认SQLite继续保护，真实业务A–F仍EXTERNAL_PENDING。
+百炼真实SDK/网页查询＋本地BGE实际向量检索＋持久三角色试点已VERIFIED_LOCAL_SYNTHETIC：实际Chrome一次受理，3份真实百炼回执、实际CPU BGE/1024维PGvector、6条完整证据、正式答案及原PDF哈希均核对通过。配置恢复、SDK无参工具拒绝、回执阶段和并发付费围栏已修复并保留失败记录。当前试点位于`http://127.0.0.1:8879/workspace/query`，精确任务、模型/代际/配置、原始证据和候选见tasks顶部与`outputs/pilot-runtime/2026-11-19/`。每日任务安装/实际触发已通过，随后按最新用户要求Disabled；同持久试点完整恢复未执行、DEFERRED。代码/文档提交`e0d80b84ddabb3497f076115dedd88fac5f2ad54`已推送且独立核对远端`origin/codex/pilot-query-20261119`一致；main未改。运行数据、原件、模型、凭据、私有日志及本地技能未上传。事故默认SQLite字节一致，真实业务A–F仍EXTERNAL_PENDING。
 
 本地能力、分段验证及真实待办唯一见[tasks当前调度](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)。本轮证据位于`outputs/pdf-implementation/2026-11-19/`：最终候选及报告适用范围由`candidate-final.json`绑定，原始失败与修复报告保留；`implementation-checkpoint.json`仅作恢复指针。旧“Basic/同步解析/自动索引启用/整Block答案”观察只属于下方历史记录。下一入场为获准G1/人工参考及真实岗位、逐用途provider准入和保留/恢复参数；缺项只暂停消费它的工作，默认不启自动压缩、真实清理或外部调用。完整企业A–F、复杂版式与目标容量仍待实际验收。
 
