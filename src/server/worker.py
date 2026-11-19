@@ -134,7 +134,12 @@ def _mark_blocked(db, task, code, message, state="blocked"):
             raise
         db.refresh(task)
         return False
-    public_message = message if code in {"ACCESS_LIMITED", "EVIDENCE_INSUFFICIENT", "VERSION_CONFLICT", "ANSWER_PLAN_REQUIRED"} else "查询服务暂不可用，请联系管理员核对后恢复原任务"
+    if state == "reconciliation_required":
+        public_message = "原查询的服务请求结果待核对，请联系管理员查看原任务。"
+    elif code in {"ACCESS_LIMITED", "EVIDENCE_INSUFFICIENT", "VERSION_CONFLICT", "ANSWER_PLAN_REQUIRED", "INDEX_NOT_READY"}:
+        public_message = message
+    else:
+        public_message = "查询服务暂不可用，请联系管理员确认恢复后重试原查询。"
     task.status, task.error_code, task.next_action = state, code, public_message
     task.revision += 1
     coverage = task.result_summary.get("coverage") if code in {"EVIDENCE_INSUFFICIENT", "ANSWER_PLAN_REQUIRED"} else None
@@ -889,8 +894,11 @@ def run_one(config: Settings, *, gateway_url: str, profile_id="local-pi", profil
                             invoke_tool(db, run.id, token, "host:present", "dc_artifacts_deliver", {}, settings=config)
                             db.commit()
                     else:
-                        if "version_conflict" in checked["data"].get("warnings", []):
+                        warnings = checked["data"].get("warnings", [])
+                        if "version_conflict" in warnings:
                             _mark_blocked(db, task, "VERSION_CONFLICT", "该设备型号的适用手册版本存在冲突，已暂停正式回答。请联系知识管理员核对适用版本。")
+                        elif {"index_not_ready", "index_stale", "index_unavailable"}.intersection(warnings):
+                            _mark_blocked(db, task, "INDEX_NOT_READY", "资料尚未准备好查询。请联系知识管理员确认索引可用，再重试原查询。")
                         else:
                             _mark_blocked(db, task, "EVIDENCE_INSUFFICIENT", "当前没有完整且适用的证据，请确认资料或型号")
                         db.commit()

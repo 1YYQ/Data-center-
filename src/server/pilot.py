@@ -864,6 +864,21 @@ def serve(config_path: Path | str = DEFAULT_CONFIG, host: str = "127.0.0.1", por
         if problems:
             application.state.engine.dispose()
             raise RuntimeError("Pilot query runtime is not ready: " + ", ".join(problems) + "; use `serve --admin-only` for setup")
+        # Loading the approved offline weights is startup work, not a business
+        # query. Complete it before opening the listener or spending a task's
+        # finite runtime lease. embed() reuses this exact integrity-checked
+        # cache and still rechecks the file identity on every real invocation.
+        from . import local_bge
+        endpoint = application.state.service_endpoints.get(local_bge.ENDPOINT_REF)
+        if not isinstance(endpoint, local_bge.LocalBgeEndpoint):
+            application.state.engine.dispose()
+            raise RuntimeError("Pilot requires the approved local embedding endpoint")
+        try:
+            with local_bge._MODEL_LOCK:
+                local_bge._load(endpoint.directory, local_bge._model_files(endpoint.directory))
+        except Exception:
+            application.state.engine.dispose()
+            raise
         from .testing_service_use import install_synthetic_answer_fixture
         sample = _read_config(config_path)[0]["synthetic_allowlist"]
         install_synthetic_answer_fixture(application, actor_id=sample["employee_user_id"],

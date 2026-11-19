@@ -200,12 +200,15 @@ def test_classification_keeps_version_tuple_and_document_constraints(local_db):
     db = local_db
     actor, _, doc, version, _, _ = governed_version(db)
     assert g.can_read_version(db, actor, version)
+    assert g.published_query_is_readable(db, actor, version, doc, context={"level": "internal"})
+    assert not g.published_query_is_readable(db, actor, version, doc, context={"level": "restricted"})
     old = g.current_confirmations(db, version, "classification")[0]
     seed_confirmation(db, actor, version, "classification", "classified", {**g.source_binding(db, version),
         "access_level": "restricted", "category": doc.category, "need_class": doc.need_class, "rule_version": "synthetic-v2"}, supersedes=old.id)
     db.commit()
     assert g.version_access_conditions(db, version)["level"] == "restricted"
     assert not g.can_read_version(db, actor, version)
+    assert not g.published_query_is_readable(db, actor, version, doc)
 
 
 def test_unselected_reparse_does_not_replace_selected_publication(local_db):

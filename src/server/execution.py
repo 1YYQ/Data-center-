@@ -11,7 +11,7 @@ from datetime import timezone
 from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from .models import AuthSession, AuthorizationGrant, Document, DocumentVersion, KnowledgeBase, QueryTask, TaskEvidence, TaskOutbox, TaskStep, User, utc_now
+from .models import AuthSession, AuthorizationGrant, Document, DocumentVersion, KnowledgeBase, QueryTask, TaskAttempt, TaskEvidence, TaskOutbox, TaskStep, User, utc_now
 from .execution_models import Conversation, ConversationMessage, ContextFact, QueryAnswerSnapshot, TaskInputRequest, TaskInputResolution, ToolInvocation, ToolCallBinding
 from .services import SafeError, audit, build_query_result, can_query_kb, evidence_is_readable, has_permission, task_write_guard
 from .answer_delivery import delivery_schema
@@ -157,12 +157,21 @@ def respond_model(db, actor, task, request, value):
         _fact(db, conversation, message, value.strip(), task.accepted_scope["knowledge_base_ids"])
     db.refresh(request)
     db.refresh(task)
-    _enqueue(db, task)
+    _enqueue(db, task, previous_status="waiting_input")
     audit(db, actor.id, "task.input_resolved", "task", task.id, request_id=request.id)
 
 
-def _enqueue(db, task):
-    step = db.scalar(select(TaskStep).where(TaskStep.task_id == task.id, TaskStep.step_key == "query"))
+def _enqueue(db, task, *, previous_status):
+    step = db.scalar(select(TaskStep).where(TaskStep.task_id == task.id, TaskStep.step_key == "query")
+                     .with_for_update().execution_options(populate_existing=True))
+    if step.lease_owner:
+        # The previous worker can still be closing its run after the task
+        # status was committed. Settle its attempt before fencing that lease.
+        db.execute(update(TaskAttempt).where(TaskAttempt.step_id == step.id,
+            TaskAttempt.attempt_no == step.attempt_count, TaskAttempt.status == "running")
+            .values(status=previous_status, finished_at=utc_now()))
+    step.lease_owner = None
+    step.lease_epoch += 1
     step.status, step.lease_until, step.completed_at = "pending", None, None
     previous = db.scalar(select(TaskOutbox).where(TaskOutbox.step_id == step.id).order_by(TaskOutbox.dispatch_no.desc()))
     for old in db.scalars(select(TaskOutbox).where(TaskOutbox.step_id == step.id, TaskOutbox.status == "pending")).all():
@@ -170,22 +179,50 @@ def _enqueue(db, task):
     db.add(TaskOutbox(step_id=step.id, dispatch_no=(previous.dispatch_no + 1 if previous else 1), status="pending", available_at=utc_now()))
 
 
-def resume_query(db, actor, task):
-    if task.owner_user_id != actor.id or task.status not in {"failed", "blocked", "interrupted"}:
+QUERY_RETRY_STATES = ("failed", "blocked", "interrupted")
+
+
+def _require_query_retry(db, actor, task):
+    if (task.kind != "query" or task.owner_user_id != actor.id or actor.status != "active"
+            or not has_permission(actor, "task.read") or not has_permission(actor, "knowledge.query")):
         raise SafeError("TASK_NOT_RESUMABLE", "当前任务不能以此方式恢复", 409)
-    from .runtime_models import ModelCallAdmission
+    if task.status == "reconciliation_required":
+        raise SafeError("MODEL_RECONCILIATION_REQUIRED", "原模型请求结果待核对，请联系管理员核对原任务", 409)
+    if task.status not in QUERY_RETRY_STATES:
+        raise SafeError("TASK_NOT_RESUMABLE", "当前任务不能以此方式恢复", 409)
+    from .runtime_models import ModelCallAdmission, TaskBudget
     if db.scalar(select(ModelCallAdmission.id).where(ModelCallAdmission.task_id == task.id, ModelCallAdmission.state.in_(["unknown", "dispatching", "streaming"]))):
         raise SafeError("MODEL_RECONCILIATION_REQUIRED", "原模型请求结果待核对，不能重新派发", 409)
-    if any(not can_query_kb(db, actor, kb) for kb in task.accepted_scope.get("knowledge_base_ids", [])):
+    knowledge_bases = task.accepted_scope.get("knowledge_base_ids")
+    if (not isinstance(knowledge_bases, list) or not knowledge_bases
+            or any(not isinstance(kb, str) or not kb or not can_query_kb(db, actor, kb) for kb in knowledge_bases)):
         raise SafeError("ACCESS_LIMITED", "任务原资料范围已失权", 403)
+    if not db.scalar(select(TaskStep.id).where(TaskStep.task_id == task.id, TaskStep.step_key == "query")):
+        raise SafeError("TASK_NOT_RESUMABLE", "原任务缺少可恢复的执行记录", 409)
+    budget = db.get(TaskBudget, task.id)
+    if budget and (budget.reserved_calls >= budget.max_calls or budget.reserved_tokens >= budget.max_reserved_tokens):
+        raise SafeError("TASK_BUDGET_EXHAUSTED", "原查询已达到调用限额，请联系管理员", 409)
+
+
+def query_retry_eligible(db, actor, task):
+    try:
+        _require_query_retry(db, actor, task)
+    except SafeError:
+        return False
+    return True
+
+
+def resume_query(db, actor, task):
+    _require_query_retry(db, actor, task)
+    previous_status = task.status
     changed = db.execute(update(QueryTask).where(QueryTask.id == task.id, QueryTask.revision == task.revision,
-        QueryTask.execution_revision == task.execution_revision, QueryTask.status.in_(["failed", "blocked", "interrupted"]))
+        QueryTask.execution_revision == task.execution_revision, QueryTask.status.in_(QUERY_RETRY_STATES))
         .values(status="pending", error_code=None, finished_at=None, next_action="等待在原范围内恢复",
             execution_revision=QueryTask.execution_revision + 1, revision=QueryTask.revision + 1).execution_options(synchronize_session=False))
     if changed.rowcount != 1:
         raise SafeError("TASK_NOT_RESUMABLE", "任务已被其他操作改变", 409)
     db.refresh(task)
-    _enqueue(db, task)
+    _enqueue(db, task, previous_status=previous_status)
 
 
 def _current_evidence(db, task, actor):

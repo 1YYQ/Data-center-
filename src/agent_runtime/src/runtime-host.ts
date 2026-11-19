@@ -171,7 +171,7 @@ async function prompt(id: string) {
     await session.prompt("Run the accepted device query using only the registered controlled tools and current backend projection.");
     const last = session.agent.state.messages.at(-1);
     const result = stop.signal.aborted ? "aborted"
-      : last?.role === "assistant" && last.stopReason === "error" ? "model_error" : "settled";
+      : last?.role === "assistant" && (last.stopReason === "error" || last.stopReason === "aborted") ? "model_error" : "settled";
     if (result !== "aborted") event("settled");
     send({ id, result: { state: result, waiting,
       pi_session_id: manager.getSessionId(), session_file: manager.getSessionFile() } });

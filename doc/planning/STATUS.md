@@ -1,6 +1,6 @@
 # 项目状态与续跑入口
 
-更新日期：2026-11-19。本次获准的本地实施已交付，状态为VERIFIED_LOCAL_SYNTHETIC：PDF持久归档→两层IR/独立QC→离线切分→完整child代际→精确证据→受约束组织答案→网页分享及原页回查已实际连通。固定Standard完成真实离线合成PDF推理，实际Pi SDK/PostgreSQL/Chrome联合正负验证通过。首期真实业务验收仍EXTERNAL_PENDING，不将合成岗位、服务或签认升级为企业验收。本轮未修改事故默认SQLite、真实授权或部署，未外发企业资料。
+更新日期：2026-11-19。本轮核心三角色A–F模拟验收及必要修复已完成，VERIFIED_LOCAL_SYNTHETIC；实际百炼/BGE原任务恢复和正式答案/原页核对通过。具体结果与未覆盖项见[本轮验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md#本轮模拟三角色af2026-11-19)。此前本地实施已交付：PDF持久归档→两层IR/独立QC→离线切分→完整child代际→精确证据→受约束组织答案→网页分享及原页回查已实际连通。固定Standard完成真实离线合成PDF推理，实际Pi SDK/PostgreSQL/Chrome联合正负验证通过。首期真实业务验收仍EXTERNAL_PENDING，不将合成岗位、服务或签认升级为企业验收。本轮未修改事故默认SQLite、真实授权或部署，未外发企业资料。
 
 本页是项目进度、证据边界和下一步的统一汇总入口。需求以 SPEC 为准，技术规则以对应设计为准，实际状态以当前工作区和运行证据为准；本页不产生业务确认、资料外发或新增开发授权。
 
@@ -17,6 +17,8 @@
 | 场景执行记录与指标 | [验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/README.md)、[指标记录](../../specs/001-device-operation-maintenance-query/artifacts/metrics/README.md) | 每条记录绑定候选版本、输入、环境和证据，不把局部检查升级为整体验收 |
 
 ## 当前本地实施
+
+三角色核心模拟A–F已VERIFIED_LOCAL_SYNTHETIC：异常和补型号、草稿/版本冲突、回答分享/资料撤权及缓存清除、真实离线解析与校正/独立QC、服务与原批次恢复均有分段网页/HTTP证据。最终qwen3.8-flash＋实际Pi SDK＋本地BGE/PGvector在同一持久原任务完成第2修订，六条来源和原PDF核对通过，累计五份真实回执及原预算保留；冷模型准备已前移至接受查询之前。权限/版本场景的正例使用生产child工具与真实回环回执，不能称每个场景均重跑SDK；并行回环短时限失败保留，不作生产容量达标结论。当前授权内无剩余就绪项；完整企业A–F仍EXTERNAL_PENDING，扩展场景和真实签认不因核心模拟通过而关闭。源/证据/下一入场以tasks顶部及本轮验收为准。
 
 最新用户调整：暂停本机新增备份/恢复演练，改用Git回溯代码和文档。已实际安装且触发一次的自有每日任务现为Disabled；唯一现有备份约0.45MiB，未新增或删除。完整同试点恢复尚未执行，按用户要求DEFERRED；Git不替代数据库/原PDF等运行数据恢复。查询闭环和Git交付继续，具体检查点见tasks顶部。
 

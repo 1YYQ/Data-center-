@@ -42,6 +42,12 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
         with pymupdf.open(path) as pdf:
             if pdf.needs_pass or not pdf.is_pdf or not 0 < len(pdf) <= 600:
                 raise ParseContractError("PDF_PREFLIGHT_FAILED")
+            # PageLabels are authored PDF metadata. Their presence does not
+            # certify that the same label is printed on the page.
+            try:
+                first_label_page = min((rule["startpage"] for rule in pdf.get_page_labels()), default=len(pdf))
+            except (KeyError, TypeError, ValueError, RuntimeError):
+                first_label_page = len(pdf)
             last_heartbeat = time.monotonic()
             for index, page in enumerate(pdf):
                 if heartbeat and time.monotonic() - last_heartbeat >= 5:
@@ -53,6 +59,11 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
                 visual = bool(images or drawings)
                 page_class = "mixed" if native and visual else "native" if native else "scan" if images else "unknown"
                 blank = not text and not visual
+                try:
+                    label = page.get_label().strip() if index >= first_label_page else ""
+                except (IndexError, KeyError, TypeError, ValueError, RuntimeError):
+                    label = ""
+                label_basis = {"kind": "pdf_page_labels", "label": label} if label and label.isprintable() and len(label) <= 128 else None
                 def candidate_box(rect):
                     box = pymupdf.Rect(rect) * page.rotation_matrix
                     box = box & page.rect
@@ -71,7 +82,7 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
                 pages.append({"file_page": index + 1, "media_box_pt": list(page.mediabox),
                     "crop_box_pt": list(page.cropbox), "rotation": page.rotation, "user_unit": user_unit,
                     "width_pt": page.rect.width, "height_pt": page.rect.height, "printed_page": None,
-                    "printed_page_basis": None, "page_class": page_class,
+                    "printed_page_basis": label_basis, "page_class": page_class,
                     "state": "blank" if blank else "pending", "native_text": text,
                     "coverage": {"native_text_present": native, "image_candidates": image_candidates,
                         "vector_candidates": vector_candidates,

@@ -441,15 +441,20 @@ def current_confirmations(db: Session, version: DocumentVersion, kind: str) -> l
     return [x for x in db.scalars(select(BusinessConfirmation).where(BusinessConfirmation.document_version_id == version.id, BusinessConfirmation.kind == kind)).all() if confirmation_is_current(db, x)]
 
 
-def _review_binding(db: Session, version: DocumentVersion, run: ParseRun, chunk: ChunkSet, refs: list[str]) -> str:
+def _review_binding(db: Session, version: DocumentVersion, run: ParseRun, chunk: ChunkSet, refs: list[str], *, require_verified=False) -> str | None:
     if run.ir_schema_version:
         from .chunk_jobs import chunk_projection_fingerprint
         from .parsing.processing import projection_fingerprint, source_verification
-        return digest({"source": source_binding(db, version), "run_id": run.id, "ir": run.ir_artifact_id,
+        data = {"source": source_binding(db, version), "run_id": run.id, "ir": run.ir_artifact_id,
             "source_projection": projection_fingerprint(db, run.id), "source_qc": run.stage_checkpoint.get("outputs", {}).get("source_qc"),
             "chunk": [chunk.id, chunk.config_hash, chunk.quality_artifact_id, chunk_projection_fingerprint(db, chunk)],
             "blocks": content_binding(db, run.id), "verification": source_verification(db, run, refs),
-            "confirmations": [[id, db.get(BusinessConfirmation, id).revision, db.get(BusinessConfirmation, id).dependency_fingerprint] for id in sorted(refs)]})
+            "confirmations": [[id, db.get(BusinessConfirmation, id).revision, db.get(BusinessConfirmation, id).dependency_fingerprint] for id in sorted(refs)]}
+        # Keep the original late verification point, without a second replay
+        # earlier in the same read-only review check. Never cache across calls.
+        if require_verified and data["verification"]["state"] != "verified":
+            return None
+        return digest(data)
     return digest({"source": source_binding(db, version), "run": [run.id, run.status, run.output_revision],
         "chunk": [chunk.id, chunk.status, chunk.splitter_version], "blocks": content_binding(db, run.id),
         "confirmations": [{"id": id, "fingerprint": db.get(BusinessConfirmation, id).dependency_fingerprint,
@@ -563,10 +568,8 @@ def _create_ir_review_set(db, actor, version, run, data):
 
 def _ir_review_is_current(db, version, run, chunk, review):
     from .chunk_jobs import chunk_set_qc_is_current
-    from .parsing.processing import source_verification
     if (not chunk or chunk.parse_run_id != run.id or run.document_version_id != version.id
-            or not chunk_set_qc_is_current(db, chunk)
-            or source_verification(db, run, review.professional_confirmation_refs)["state"] != "verified"):
+            or not chunk_set_qc_is_current(db, chunk)):
         return False
     leaves = db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run.id, ContentBlock.structure_role == "leaf")).all()
     if (set(review.required_refs) != {row.id for row in leaves} or set(review.reviewed_refs) != set(review.required_refs)
@@ -574,7 +577,8 @@ def _ir_review_is_current(db, version, run, chunk, review):
             or any(row.review_status != "approved" or review.block_bindings[row.id] != {"revision": row.revision,
                       "content_hash": block_binding(row)} for row in leaves)):
         return False
-    return review.binding_fingerprint == _review_binding(db, version, run, chunk, review.professional_confirmation_refs)
+    return review.binding_fingerprint == _review_binding(db, version, run, chunk, review.professional_confirmation_refs,
+                                                        require_verified=True)
 
 
 def select_source_candidate(db, actor, version, payload):
@@ -974,6 +978,18 @@ def version_access_conditions(db: Session, version: DocumentVersion) -> dict | N
     return conditions[0]
 
 
+def published_query_is_readable(db: Session, actor: User, version: DocumentVersion, document: Document, *, context=None) -> bool:
+    """One publication proof for both operations at this query boundary only."""
+    from .services import can_access_document
+    if version.document_id != document.id or not publication_is_current(db, version):
+        return False
+    conditions = version_access_conditions(db, version)
+    return bool(conditions and all(
+        can_access_document(db, actor, document, operation, context=context)
+        and _tuple_allowed(db, actor, document, operation, conditions)
+        for operation in ("document.read", "knowledge.query")))
+
+
 def can_read_version(db: Session, actor: User, version: DocumentVersion, operation: str = "document.read", *, reference: bool = False, historical: bool = False) -> bool:
     from .services import can_access_document
     document = db.get(Document, version.document_id, populate_existing=True)
@@ -1049,7 +1065,7 @@ def _tuple_allowed(db: Session, actor: User, document: Document, operation: str,
     now = utc_now()
     for grant in db.scalars(select(AuthorizationGrant).where(AuthorizationGrant.subject_user_id == actor.id).execution_options(populate_existing=True)).all():
         approval = db.get(BusinessApproval, grant.approval_id, populate_existing=True) if grant.approval_id else None
-        if not _grant_valid(grant, operation, now) or not approval_is_current(db, approval) or not approval_allows_grant(approval, grant, now):
+        if not _grant_valid(grant, operation, now) or not approval_allows_grant(approval, grant, now):
             continue
         if any(getattr(grant, key) != value for key, value in conditions.items()):
             continue

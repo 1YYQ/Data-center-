@@ -202,21 +202,32 @@ def accept_selected_parse(db: Session, actor: User, version: DocumentVersion, fi
                           settings: Settings, endpoints: dict) -> ParseRun:
     """Accept one unresolved run per source while the caller holds the parent document lock."""
     from .service_use import pin_use, prove_input
-    from .service_use_models import ServiceUseCall
-    from .services import audit
+    from .service_use_models import ServiceUseCall, ServiceUsePin
+    from .services import SafeError, audit
 
     if version.source_file_id != file.id:
         raise ProviderError("PARSE_SOURCE_CHANGED")
     body = _source_bytes(file, file.sha256, settings)
-    uncertain_call = select(ServiceUseCall.id).where(ServiceUseCall.pin_id == ParseServiceJob.pin_id,
-        ServiceUseCall.state.in_(("unknown", "dispatching"))).exists()
+    calls = select(ServiceUseCall.id).where(ServiceUseCall.pin_id == ParseServiceJob.pin_id)
+    uncertain_state = ServiceUseCall.state.in_(("unknown", "dispatching"))
+    uncertain_call = calls.where(uncertain_state).exists()
+    uncertain_submission = calls.where(or_(
+        and_(ServiceUseCall.method.in_(("POST", "PUT")), uncertain_state),
+        and_(ServiceUseCall.method == "POST", ServiceUseCall.state == "received", ParseRun.provider_task_id.is_(None)),
+    )).exists()
+    exhausted_batch = select(ServiceUsePin.id).where(ServiceUsePin.id == ParseServiceJob.pin_id,
+        ServiceUsePin.calls_used >= ServiceUsePin.max_calls).exists()
     prior = db.execute(select(ParseRun, ParseServiceJob.actor_id, ParseServiceJob.mode).join(ParseServiceJob,
         ParseServiceJob.parse_run_id == ParseRun.id).where(ParseRun.document_version_id == version.id,
         ParseServiceJob.source_file_id == file.id, ParseServiceJob.source_sha256 == file.sha256,
-        or_(ParseRun.status.in_(_UNSETTLED), and_(ParseRun.status == "failed", uncertain_call)))
+        or_(ParseRun.status.in_(_UNSETTLED), and_(ParseRun.status == "failed", uncertain_call),
+            and_(ParseRun.status == "cancelled", or_(uncertain_submission,
+                and_(ParseRun.provider_task_id.is_not(None), exhausted_batch)))))
         .order_by(ParseRun.created_at, ParseRun.id).limit(1)).first()
     if prior:
         run, owner_id, prior_mode = prior
+        if run.status == "cancelled":
+            raise SafeError("PARSE_RECONCILIATION_REQUIRED", "原远端解析批次仍须核对，请联系管理员查看原批次", 409)
         if owner_id == actor.id and prior_mode == "selected_service":
             return run
         raise ProviderError("PARSE_RECONCILIATION_REQUIRED")
@@ -324,6 +335,7 @@ def _fence_authority(db: Session, run: ParseRun, job: ParseServiceJob) -> None:
 
 def _record_failure(db: Session, run: ParseRun, job: ParseServiceJob, attempt: int, code: str,
                     settings: Settings, invalid_archive: bytes | None) -> None:
+    from .service_use_models import ServiceUseCall
     from .services import audit
 
     db.rollback()
@@ -337,9 +349,19 @@ def _record_failure(db: Session, run: ParseRun, job: ParseServiceJob, attempt: i
     if run.status != "running":
         db.rollback()
         return
+    if run.provider_task_id and code == "SERVICE_UPSTREAM_REJECTED":
+        # A rejected archive URL is distinct from a rejected batch-status GET.
+        # Use the physical receipt without reading or exposing the signed URL.
+        call = db.scalar(select(ServiceUseCall).where(ServiceUseCall.pin_id == job.pin_id)
+                         .order_by(ServiceUseCall.ordinal.desc()).limit(1))
+        if call and (call.method, call.purpose, call.state) == ("GET", "download", "failed") and call.response_status in {403, 404, 410}:
+            code = "PARSE_RESULT_LINK_UNAVAILABLE"
     if not run.provider_task_id and _has_submit_intent(db, job.pin_id):
         state = "reconciliation_required"
-    elif run.provider_task_id and code in {"SERVICE_OUTCOME_UNKNOWN", "PARSE_ARCHIVE_STORAGE_UNAVAILABLE", "PARSE_PERSISTENCE_UNAVAILABLE"}:
+    elif run.provider_task_id and code == "SERVICE_CALL_BUDGET":
+        state, code = "reconciliation_required", "PARSE_RESULT_RECOVERY_BUDGET_EXHAUSTED"
+    elif run.provider_task_id and code in {"SERVICE_OUTCOME_UNKNOWN", "PARSE_ARCHIVE_STORAGE_UNAVAILABLE",
+                                           "PARSE_PERSISTENCE_UNAVAILABLE", "PARSE_RESULT_LINK_UNAVAILABLE"}:
         state = "waiting_external"
     else:
         state = "failed"

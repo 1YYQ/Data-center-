@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from .execution_models import QueryAnswerSnapshot
-from .models import AuthorizationGrant, BusinessApproval, QueryTask, TaskShare, TaskStep, User, utc_now
+from .models import ApiIdempotencyRecord, AuthorizationGrant, BusinessApproval, QueryTask, TaskShare, TaskStep, User, utc_now
 from .runtime_gate import close_run, open_run
 from .security import hash_password
 from .test_execution import execution_http, _create, _headers, _tool
@@ -98,7 +98,9 @@ def test_share_requires_same_task_current_completed_answer_snapshot(share_http):
 def test_recipient_reads_only_answer_with_current_dr_and_cannot_read_owner_input_or_conditions(share_http):
     f = share_http
     task, snapshot, secret = _produce_answer(f)
-    assert _share(f, task, snapshot, [f.reader, f.no_dr]).status_code == 200
+    assert _share(f, task, snapshot, [f.reader, f.no_dr]).status_code == 409
+    assert f.db.scalar(select(func.count()).select_from(TaskShare).where(TaskShare.task_id == task.id)) == 0
+    assert _share(f, task, snapshot, [f.reader]).status_code == 200
     owner = f.client.get(f"/tasks/{task.id}")
     assert secret in owner.text
     result = f.reader_client.get(f"/tasks/{task.id}/result")
@@ -168,7 +170,14 @@ def test_share_put_requires_csrf_etag_idempotency_and_replay_cannot_undo_revocat
 def test_old_share_never_follows_a_later_execution_answer(share_http):
     f = share_http
     task, original, _ = _produce_answer(f)
-    assert _share(f, task, original, [f.reader]).status_code == 200
+    original_headers = _headers(task.revision)
+    assert _share(f, task, original, [f.reader], headers=original_headers).status_code == 200
+    receipt = f.db.scalar(select(ApiIdempotencyRecord).where(
+        ApiIdempotencyRecord.idempotency_key == original_headers["Idempotency-Key"]))
+    # Preserve compatibility with completed receipts produced before the
+    # snapshot reference was included in their durable resource projection.
+    receipt.resource_refs = {"task_id": task.id}
+    f.db.commit()
     assert f.reader_client.get(f"/tasks/{task.id}/result").json()["answer_snapshot_id"] == original.id
     # Model a trusted later execution while preserving the old immutable answer
     # and the old share. All new evidence/validation/presentation still run via
@@ -187,3 +196,28 @@ def test_old_share_never_follows_a_later_execution_answer(share_http):
     assert result.status_code in {403, 404}
     assert newer.id not in result.text
     assert f.db.scalar(select(func.count()).select_from(QueryAnswerSnapshot).where(QueryAnswerSnapshot.task_id == task.id)) == 2
+    listed = f.client.get(f"/tasks/{task.id}/shares")
+    assert listed.status_code == 200 and listed.json()["items"] == []
+    assert listed.json()["answer_snapshot_id"] == newer.id
+    # A later replacement belongs only to the new answer. Revoke and restore
+    # explicitly chosen entries without migrating an old recipient implicitly.
+    approval = BusinessApproval(applicant=f.no_dr.id, scope={"knowledge_base_id": f.kb.id,
+        "document_id": None, "level": "synthetic-level", "category": "synthetic-category", "need_class": "synthetic-need"},
+        operations=["document.read"])
+    f.db.add(approval); f.db.flush(); seed_verified_approval(f.db, approval)
+    f.db.add(AuthorizationGrant(subject_user_id=f.no_dr.id, knowledge_base_id=f.kb.id, operation="document.read",
+        level="synthetic-level", category="synthetic-category", need_class="synthetic-need", approval_id=approval.id,
+        valid_until=approval.valid_until))
+    f.db.commit()
+    assert _share(f, task, newer, [f.no_dr]).status_code == 200
+    replay = f.client.put(f"/tasks/{task.id}/shares", json={"answer_snapshot_id": original.id,
+        "entries": [{"user_id": f.reader.id}]}, headers=original_headers)
+    assert replay.status_code == 200 and replay.json()["answer_snapshot_id"] == original.id
+    assert {item["user_id"] for item in replay.json()["items"]} == {f.reader.id}
+    assert f.reader_client.get(f"/tasks/{task.id}/result").status_code in {403, 404}
+    f.db.expire_all()
+    old_share = f.db.scalar(select(TaskShare).where(TaskShare.task_id == task.id, TaskShare.recipient_user_id == f.reader.id))
+    assert old_share.answer_snapshot_id == original.id
+    assert _share(f, task, newer, []).status_code == 200
+    f.db.refresh(old_share)
+    assert old_share.answer_snapshot_id == original.id and old_share.status == "active"

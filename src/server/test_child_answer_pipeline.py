@@ -201,6 +201,11 @@ def _scripted_model():
                 elif completed["dc_artifacts_validate"]["ready"]:
                     tool = None if model.mode == "free_prose" else "dc_artifacts_deliver"
                     args = {"answer_plan": _plan(projection["answer_contract"], mode=model.mode)} if tool else {}
+                elif model.mode == "no_evidence_stop":
+                    # A well-behaved provider ends without inventing evidence.
+                    # Production finalization must still expose the precise
+                    # missing/conflict state rather than trusting this prose.
+                    tool, args = None, {}
                 else:
                     raise AssertionError(projection["answer_contract"]["coverage"])
             except (AssertionError, IndexError, KeyError) as error:

@@ -30,6 +30,8 @@ const labels: Record<string, string> = {
   PARSE_EXECUTION_UNCERTAIN: "后台须核对本次执行是否已结束。",
   PARSE_PERSISTENCE_UNAVAILABLE: "无法保存本次进度，后台恢复后可继续核对。",
   PARSE_ARCHIVE_STORAGE_UNAVAILABLE: "解析归档暂不可用，后台恢复后可继续核对。",
+  PARSE_RESULT_LINK_UNAVAILABLE: "远端结果链接暂不可用。请联系管理员核对原批次的下载链接，再刷新此批次。",
+  PARSE_RESULT_RECOVERY_BUDGET_EXHAUSTED: "原解析批次已达到调用限额。请联系管理员核对原批次。",
   PARSE_AUTHORITY_REVOKED: "发起人已失去资料管理权限。",
   PARSE_PROFILE_CHANGED: "此批次的解析配置已发生变化。",
   PARSE_CONTRACT_UNSUPPORTED: "解析产物格式无法核验。", PARSE_SOURCE_UNAVAILABLE: "原始 PDF 当前不可读取。",

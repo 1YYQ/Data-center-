@@ -2,7 +2,24 @@
 
 2026-11-19：真实A–F及持续对话/查阅/单条分享/反馈扩展仍为NOT_RUN，缺真实职责、适用/专业确认、人工答案及所用服务真实准入；本轮本地实施未升级这些场景。历史EV追踪只适用其绑定候选，最新本地能力和分段证据从[tasks当前调度](../../tasks.md#当前调度与本次审查preflight-001)进入，项目进度仍只在STATUS维护。
 
-## 本地工程集成记录（2026-11-19）
+## 本轮模拟三角色A–F（2026-11-19）
+
+按用户确认的第一版模拟基线执行。岗位、外部审批/专业签认及人工参考明确为合成；实际使用已安装Chrome、正式React、生产HTTP/权限/来源/交付门禁和隔离PostgreSQL。原始报告在`outputs/pilot-af/2026-11-19/`，失败候选原样保留，不能把其JUnit汇总失败记为全通过。真实组织环境仍按下方NOT_RUN处理。
+
+| 场景 | 本轮状态与证据 | 证据边界 |
+| --- | --- | --- |
+| A 正常查询 | VERIFIED_LOCAL_SYNTHETIC：百炼qwen3.8-flash、实际Pi SDK、本地真实BGE/1024维PGvector、六条完整证据及PDF哈希核对；原任务恢复成功 | `browser/result.json`、`live-query-ledger.json`、`persistent/retry-final.json`。原task `8a7c370c-aa0c-4179-bc74-c06cd7619d1e`首轮冷装载90.73秒受阻，监听前预备模型后第2修订48.96秒成功；累计5/8次真实received、预算未重置。网页重试202后取证脚本字段错误关闭页面，随后只读重开完成核对，无第二次重试POST。输入恢复另见`query/abc/observations.json`的A/B子检查；该轮后续脚本定位失败，整份`query-fifth.xml`不标通过 |
+| B 缺型号/缺资料 | VERIFIED_LOCAL_SYNTHETIC：缺型号不调用模型，刷新后补充仍为原task；错误型号/无维护资料均无答案/引文 | 输入恢复见A/B子检查；`query-remainder-final.xml`的negative节点通过，`query/abc-negative/`有网页及表单状态。其versions节点失败另外保留 |
+| C 草稿/冲突 | VERIFIED_LOCAL_SYNTHETIC：新草稿保持旧已发布版和代际；默认草稿原件不可读，明确开放参考后仍draft；记录适用冲突后正式查询阻断 | `query-version-final.xml`及`query/abc-versions/`。版本正例用生产child工具、真实回环模型回执及严格快照交付，冲突使用实际SDK；本节点不重新证明SDK正例/实际供应商质量 |
+| D 权限/分享撤权 | VERIFIED_LOCAL_SYNTHETIC：无资料读取权的分享写入409且无部分写入；授权接收者可看同一回答/原页，其他问题/对话不可见；撤share清除任务正文/引用/裁图；SA撤资料授权后重新登录仍不可读；system-only不获正文 | `permissions/d-child-bridge-verified.xml`、`permissions/child-bridge-verified/`，实际Chrome157、CJFS-fko构建、UUID PG，接收者无新查询POST。撤share不剥夺独立原PDF读取权，撤底层权限后PDF同样404。`d-expiry-release.xml`另证+08:00转UTC、客户端快钟不误撤其他人、真正到期即失效；旧快照/旧幂等隔离有定向回归 |
+| E 解析质量 | VERIFIED_LOCAL_SYNTHETIC：实际Standard4.2.3文字/空白、图文表格和扫描原包；KM按原页校正文句/警告，新Run独立核验及候选，原件/父IR不改 | `quality/quality-05.xml`、`quality/qc-gates.xml`、`quality/browser-05/`。PageLabels不充当印刷号；缺表头关系及指代未清的反例被各自源/集合QC阻断；另有无歧义扫描正例，不以反例降门禁 |
+| F 服务与解析恢复 | VERIFIED_LOCAL_SYNTHETIC：已知503重检后恢复原任务；丢失重试回执同键恢复；残流unknown不再外发；索引异常、TLS拒绝、410旧链接只GET原批次恢复、取消不能绕过未知/额度围栏 | `recovery/report.json`汇总分段Chrome与精确JUnit；旧汇总索引断言失败由`browser-final-index.xml`补证。`expired-link-final.xml`和`cancel-fences-final.xml`通过；实际外部故障及403/404下载变体未制造 |
+
+D和C的网关驱动只分离权限/版本断言与本机SDK总时限，不直接构造快照或伪造received回执。并行验收负载下回环SDK20秒仍出现受控超时，保留原报告；不声称吞吐、复杂版式或目标容量验收通过。持续对话/范围切换/资料目录及反馈扩展按各自FR另验，不从核心A–F推定全通过。
+
+本地备份保持停用，无新增备份或完整恢复；代码/文档沿获准Git分支保存。最后候选、实际构建和各报告的适用来源由本轮`candidate-final.json`绑定，项目进度与下一动作只在STATUS/tasks维护。
+
+## 本地工程集成记录（2026-11-19，前轮）
 
 本轮为合成PDF、合成签认/服务、实际SDK和隔离数据库验证，结果为VERIFIED_LOCAL_SYNTHETIC。固定Standard实际离线推理和原包回放不等于G1质量验收；本地浏览器观察不等于真实岗位A–F通过。候选及各报告适用范围见[最终绑定](../../../../outputs/pdf-implementation/2026-11-19/candidate-final.json)。
 

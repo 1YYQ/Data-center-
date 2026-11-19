@@ -73,6 +73,7 @@ from .schemas import (
 from .services import (
     ROLE_PERMISSIONS,
     SafeError,
+    _utc,
     approval_allows_grant,
     audit,
     build_query_result,
@@ -1288,12 +1289,16 @@ def create_app(config: Settings | None = None) -> FastAPI:
     def get_task(task_id: str, request: Request, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
         actor, _ = _user_or_401(request, db)
         task = db.get(QueryTask, task_id)
-        if not task or (not can_read_task(db, actor, task) and task.owner_user_id != actor.id):
+        if not task or (task.owner_user_id != actor.id and not can_read_task(db, actor, task)):
             raise SafeError("NOT_FOUND", "资源不存在", 404)
         actor, _ = _user_or_401(request, db)
         if not can_read_task(db, actor, task):
             return {"id": task.id, "status": "access_limited", "next_action": "访问条件已变化"}
-        return _json_response(task_view(task, viewer_user_id=actor.id), response, task.revision)
+        view = task_view(task, viewer_user_id=actor.id)
+        if task.owner_user_id == actor.id:
+            from .execution import query_retry_eligible
+            view["retry_eligible"] = query_retry_eligible(db, actor, task)
+        return _json_response(view, response, task.revision)
 
     @app.get("/tasks/{task_id}/status")
     def task_status(task_id: str, request: Request, db: Session = Depends(get_db)) -> dict[str, Any]:
@@ -1301,6 +1306,17 @@ def create_app(config: Settings | None = None) -> FastAPI:
         task = db.get(QueryTask, task_id)
         if not task:
             raise SafeError("NOT_FOUND", "资源不存在", 404)
+        if (task.owner_user_id == actor.id and task.kind == "query"
+                and task.status in {"pending", "running"} and task.accepted_scope):
+            from .services import can_query_kb
+            libraries = task.accepted_scope.get("knowledge_base_ids", [])
+            if (not has_permission(actor, "task.read") or not has_permission(actor, "knowledge.query")
+                    or not libraries or any(not can_query_kb(db, actor, library) for library in libraries)):
+                return {"id": task.id, "status": "access_limited", "message": "访问条件已变化"}
+            # Only progress is disclosed. Do not replay every evidence manifest
+            # and original-file hash on each second of an owner's live poll.
+            # Terminal views and all content still use their full read gates.
+            return {"id": task.id, "status": task.status, "revision": task.revision}
         actor, _ = _user_or_401(request, db)
         if not can_read_task(db, actor, task):
             if task.owner_user_id == actor.id:
@@ -1422,8 +1438,27 @@ def create_app(config: Settings | None = None) -> FastAPI:
         _user_or_401(request, db)
         return evidence_view(item, version, document)
 
+    def share_snapshot(db, task):
+        if not task.accepted_scope:
+            return None
+        from .execution_models import QueryAnswerSnapshot
+        return db.scalar(select(QueryAnswerSnapshot.id).where(QueryAnswerSnapshot.task_id == task.id,
+            QueryAnswerSnapshot.execution_revision == task.execution_revision))
+
+    def share_rows(db, task, snapshot_id):
+        return db.scalars(select(TaskShare).where(TaskShare.task_id == task.id,
+            TaskShare.answer_snapshot_id.is_(None) if snapshot_id is None else TaskShare.answer_snapshot_id == snapshot_id)
+            .order_by(TaskShare.recipient_user_id)).all()
+
+    def share_view(item):
+        expires = _utc(item.expires_at) if item.expires_at else None
+        state = "expired" if item.status == "active" and expires and expires <= utc_now() else item.status
+        return {"user_id": item.recipient_user_id, "answer_snapshot_id": item.answer_snapshot_id,
+            "granted_at": _utc(item.granted_at).isoformat(), "expires_at": expires.isoformat() if expires else None,
+            "revoked_at": _utc(item.revoked_at).isoformat() if item.revoked_at else None, "status": state}
+
     @app.get("/tasks/{task_id}/shares")
-    def list_shares(task_id: str, request: Request, db: Session = Depends(get_db)) -> dict[str, Any]:
+    def list_shares(task_id: str, request: Request, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
         actor, _ = _user_or_401(request, db)
         task = db.get(QueryTask, task_id)
         if not task or task.owner_user_id != actor.id:
@@ -1431,7 +1466,9 @@ def create_app(config: Settings | None = None) -> FastAPI:
         _require_permission(actor, "task.share")
         if not can_read_task(db, actor, task):
             raise SafeError("ACCESS_LIMITED", "回答来源访问条件已变化；仍可提交仅撤销分享的操作", 403)
-        return {"items": [{"user_id": item.recipient_user_id, "granted_at": item.granted_at.isoformat(), "expires_at": item.expires_at.isoformat() if item.expires_at else None, "revoked_at": item.revoked_at.isoformat() if item.revoked_at else None, "status": item.status} for item in db.scalars(select(TaskShare).where(TaskShare.task_id == task.id)).all()]}
+        snapshot_id = share_snapshot(db, task)
+        return _json_response({"answer_snapshot_id": snapshot_id,
+            "items": [share_view(item) for item in share_rows(db, task, snapshot_id)]}, response, task.revision)
 
     @app.put("/tasks/{task_id}/shares")
     def replace_shares(task_id: str, payload: ShareInput, request: Request, response: Response, if_match: Annotated[str | None, Header()] = None,
@@ -1448,7 +1485,9 @@ def create_app(config: Settings | None = None) -> FastAPI:
         if not replayed:
             check_if_match(if_match, task.revision)
         if replayed:
-            return _json_response({"items": [{"user_id": item.recipient_user_id, "status": item.status, "expires_at": item.expires_at.isoformat() if item.expires_at else None, "revoked_at": item.revoked_at.isoformat() if item.revoked_at else None} for item in db.scalars(select(TaskShare).where(TaskShare.task_id == task.id)).all()]}, response, task.revision)
+            snapshot_id = record.resource_refs.get("answer_snapshot_id", payload.answer_snapshot_id if task.accepted_scope else None)
+            return _json_response({"answer_snapshot_id": snapshot_id,
+                "items": [share_view(item) for item in share_rows(db, task, snapshot_id)]}, response, task.revision)
         snapshot_id = None
         if task.kind != "query":
             raise SafeError("ANSWER_SHARE_REQUIRED", "只能分享一条查询回答", 409)
@@ -1461,7 +1500,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
         # Serialize replacement before reading the existing recipient set. A
         # concurrent replacement with the same revision must fail, never union
         # two independently chosen lists or restore a revoked recipient.
-        from .services import task_write_guard, _utc
+        from .services import task_write_guard
         try:
             task_write_guard(db, task, allowed_statuses=(task.status,))
         except SafeError as changed:
@@ -1484,9 +1523,13 @@ def create_app(config: Settings | None = None) -> FastAPI:
         if not can_read_task(db, actor, task) and not revoke_only:
             raise SafeError("ACCESS_LIMITED", "回答来源访问条件已变化，只能撤销已有分享", 403)
         for user_id, share in existing.items():
-            if user_id not in desired:
+            if share.answer_snapshot_id == snapshot_id and user_id not in desired:
                 share.status = "revoked"
                 share.revoked_at = utc_now()
+        if not revoke_only and desired:
+            # Approval revocation serializes on the beneficiary User. Keep the
+            # recipients' current identity/authority stable through this write.
+            db.scalars(select(User.id).where(User.id.in_(desired)).order_by(User.id).with_for_update(read=True)).all()
         for user_id, item in desired.items():
             recipient = db.get(User, user_id)
             if not recipient or recipient.status != "active":
@@ -1495,12 +1538,18 @@ def create_app(config: Settings | None = None) -> FastAPI:
             if share:
                 share.status = "active"
                 share.revoked_at = None
-                share.expires_at = item.expires_at
+                share.expires_at = _utc(item.expires_at) if item.expires_at else None
                 share.answer_snapshot_id = snapshot_id
                 share.granted_by = actor.id
             else:
-                db.add(TaskShare(task_id=task.id, recipient_user_id=user_id, granted_by=actor.id, expires_at=item.expires_at, answer_snapshot_id=snapshot_id))
+                db.add(TaskShare(task_id=task.id, recipient_user_id=user_id, granted_by=actor.id,
+                    expires_at=_utc(item.expires_at) if item.expires_at else None, answer_snapshot_id=snapshot_id))
         db.flush()
+        if not revoke_only:
+            for user_id in desired:
+                recipient = db.get(User, user_id, populate_existing=True)
+                if not recipient or not can_read_task(db, recipient, task):
+                    raise SafeError("SHARE_RECIPIENT_UNAVAILABLE", "接收者当前不能读取这条回答所需的资料，分享未保存", 409)
         if revoke_only:
             db.scalar(select(AuthSession.id).where(AuthSession.id == session.id).with_for_update(read=True))
             db.scalar(select(User.id).where(User.id == actor.id).with_for_update(read=True))
@@ -1512,9 +1561,10 @@ def create_app(config: Settings | None = None) -> FastAPI:
             raise SafeError("ACCESS_LIMITED", "回答来源访问条件已变化，分享未提交", 403)
         task.revision += 1
         audit(db, actor.id, "task.shared", "task", task.id)
-        complete_idempotency(db, record, status_code=200, refs={"task_id": task.id})
+        complete_idempotency(db, record, status_code=200, refs={"task_id": task.id, "answer_snapshot_id": snapshot_id})
         db.commit()
-        return _json_response({"items": [{"user_id": item.recipient_user_id, "status": item.status, "expires_at": item.expires_at.isoformat() if item.expires_at else None, "revoked_at": item.revoked_at.isoformat() if item.revoked_at else None} for item in db.scalars(select(TaskShare).where(TaskShare.task_id == task.id)).all()]}, response, task.revision)
+        return _json_response({"answer_snapshot_id": snapshot_id,
+            "items": [share_view(item) for item in share_rows(db, task, snapshot_id)]}, response, task.revision)
 
     @app.get("/admin/audit")
     def audit_log(request: Request, db: Session = Depends(get_db)) -> dict[str, Any]:

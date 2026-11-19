@@ -3,6 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 import json
 import os
+from pathlib import Path
+import re
 import subprocess
 import sys
 from threading import Barrier
@@ -78,7 +80,7 @@ def business_parse(request, tmp_path, monkeypatch):
             init_db(app.state.engine, config)
         with app.state.session_factory() as db:
             seed_reference_data(db)
-            manager, _, document, version, _, _ = synthetic_draft(db)
+            manager, kb, document, version, _, _ = synthetic_draft(db)
             manager.credential_state, manager.credential_hash = "active", hash_password(_PASSWORD)
             admin = User(username="synthetic-admin-" + uuid4().hex, display_name="SYNTHETIC configuration administrator",
                 status="active", credential_state="active", credential_hash=hash_password(_PASSWORD), roles=["system_admin"])
@@ -88,7 +90,7 @@ def business_parse(request, tmp_path, monkeypatch):
             version.source_file_id = file.id
             db.commit()
             fixture = SimpleNamespace(app=app, config=config, actor_id=manager.id, version_id=version.id,
-                document_id=document.id, file_id=file.id, manager=manager.username, admin=admin.username,
+                document_id=document.id, kb_id=kb.id, file_id=file.id, manager=manager.username, admin=admin.username,
                 path=f"/documents/{document.id}/versions/{version.id}/parse-runs")
         with run_synthetic_provider(credential=_SECRET) as provider, TestClient(app) as manager_client, TestClient(app) as admin_client:
             app.state.service_endpoints = {"synthetic": LocalEndpoint(provider.port, _ENV)}
@@ -113,6 +115,14 @@ def _attest(fixture, *, version_id=None, payload=_PDF):
 
 def _accept(fixture, headers=None):
     return _expect(fixture.client.post(fixture.path, json=_MODE, headers=headers or _headers()), 202)
+
+
+def _cancel_selected_parse(fixture, run_id):
+    versions = _expect(fixture.client.get(f"/documents/{fixture.document_id}/versions"), 200)["items"]
+    revision = next(version["revision"] for version in versions if version["id"] == fixture.version_id)
+    cancelled = _expect(fixture.client.post(f"/parse-runs/{run_id}/cancel", json={"reason": "SYNTHETIC cancel local work"},
+        headers=_headers(f'"{revision}"')), 200)
+    assert (cancelled["id"], cancelled["status"]) == (run_id, "cancelled")
 
 
 def _advance(fixture, run_id):
@@ -196,8 +206,11 @@ def test_other_resource_attestation_and_changed_original_cannot_send(business_pa
 def test_unknown_post_keeps_its_receipt_and_never_submits_again(business_parse):
     f = business_parse
     _attest(f)
+    before_dispatch = _accept(f)["parse_run_id"]
+    _cancel_selected_parse(f, before_dispatch)
     headers = _headers()
     run_id = _accept(f, headers)["parse_run_id"]
+    assert run_id != before_dispatch and not f.provider.requests
     f.provider.mode = "disconnect"
     observed = ("reconciliation_required", "SERVICE_OUTCOME_UNKNOWN", None)
     assert _advance(f, run_id) == observed
@@ -207,6 +220,15 @@ def test_unknown_post_keeps_its_receipt_and_never_submits_again(business_parse):
     assert _advance(f, run_id) == observed
     assert [(r.method, r.target) for r in f.provider.requests] == [("POST", BATCH_PATH)]
     assert [(r.method, r.state) for r in _calls(f, run_id)] == [("POST", "unknown")]
+    original_call, = _calls(f, run_id)
+    _cancel_selected_parse(f, run_id)
+    assert _accept(f, headers) == {"parse_run_id": run_id, "status": "cancelled"}
+    denied = f.client.post(f.path, json=_MODE, headers=_headers())
+    assert denied.status_code == 409 and denied.json()["code"] == "PARSE_RECONCILIATION_REQUIRED"
+    assert _advance(f, run_id) == ("cancelled", "PARSE_CANCELLED", None)
+    retained, = _calls(f, run_id)
+    assert (retained.id, retained.method, retained.state) == (original_call.id, "POST", "unknown")
+    assert len(f.provider.requests) == 1
 
 
 def test_concurrent_accepts_for_same_source_share_one_unresolved_run(business_parse):
@@ -305,6 +327,123 @@ def test_invalid_download_is_retained_privately_without_blocks(business_parse, m
         assert file_path(artifact, f.config).read_bytes() == invalid
         assert db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run_id)).all() == []
         assert db.scalars(select(ChunkSet).where(ChunkSet.parse_run_id == run_id)).all() == []
+
+
+def _observe_expired_result_link(f, run_id):
+    from playwright.sync_api import expect, sync_playwright
+
+    from .test_child_answer_pipeline import _api_gateway
+    from .test_workspace_browser import _login as login_workspace, _select
+
+    chrome = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
+    output = Path(os.environ["DATACENTER_TEST_EXPIRED_LINK_CHROME"])
+    output.mkdir(parents=True, exist_ok=True)
+    with _api_gateway(f.app) as (address, _), sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path=str(chrome),
+            args=["--disable-background-networking", "--disable-component-update"])
+        try:
+            with browser.new_context(viewport={"width": 1440, "height": 1000}, service_workers="block") as context:
+                context.route(re.compile(r"^https?://(?!" + re.escape(address.removeprefix("http://") + "/") + r")"),
+                              lambda route: route.abort())
+                page = context.new_page()
+                login_workspace(SimpleNamespace(page=page, address=address + "/"), "manage",
+                                SimpleNamespace(username=f.manager), _PASSWORD)
+                for label, value in (("知识库", f.kb_id), ("文档", f.document_id), ("版本", f.version_id), ("解析批次", run_id)):
+                    _select(page, label).select_option(value)
+                message = "远端结果链接暂不可用。请联系管理员核对原批次的下载链接，再刷新此批次。"
+                expect(page.get_by_text(message, exact=True)).to_be_visible()
+                refresh = page.get_by_role("button", name="刷新解析批次", exact=True)
+                with page.expect_response(address + "/parse-runs/" + run_id) as refreshed:
+                    refresh.click()
+                assert refreshed.value.status == 200 and refreshed.value.json()["id"] == run_id
+                expect(refresh).to_be_enabled()
+                expect(page.get_by_text(message, exact=True)).to_be_visible()
+                page.screenshot(path=str(output / "manager-expired-result-link.png"), full_page=True)
+                (output / "manager-expired-result-link.json").write_text(json.dumps({
+                    "run_id": run_id, "browser": browser.version, "next_action": message,
+                    "bundle": page.locator('script[src^="/workspace/assets/"]').first.get_attribute("src"),
+                    "refresh_reads_original_run": True,
+                }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        finally:
+            browser.close()
+
+
+@pytest.mark.parametrize("renewed", [True, False], ids=["renewed", "budget-exhausted"])
+def test_expired_result_link_never_resubmits_original_batch(business_parse, monkeypatch, renewed):
+    from .parse_worker import scan_once
+
+    f = business_parse
+    _attest(f)
+    original_headers = _headers()
+    run_id = _accept(f, original_headers)["parse_run_id"]
+    batch_id = "synthetic-" + run_id
+    status_path = "/parse-runs/" + run_id
+    with f.app.state.session_factory() as db:
+        pin = db.get(ServiceUsePin, db.get(parse_jobs.ParseServiceJob, run_id).pin_id)
+        call_limit = pin.max_calls
+    original_url, original_transfer = _Handler._transfer_url, _Handler._transfer
+    expired_ticket = "ticket=expired-synthetic"
+    link_expired = True
+
+    def result_url(handler, target, port):
+        url = original_url(handler, target, port)
+        if link_expired and target.startswith(DOWNLOAD_PATH):
+            return url.partition("?")[0] + "?" + expired_ticket
+        return url
+
+    def read_result(handler, path, body):
+        if path.startswith(DOWNLOAD_PATH) and handler.path.partition("?")[2] == expired_ticket:
+            handler._reply(410)
+        else:
+            original_transfer(handler, path, body)
+
+    monkeypatch.setattr(_Handler, "_transfer_url", result_url)
+    monkeypatch.setattr(_Handler, "_transfer", read_result)
+    assert _advance(f, run_id) == ("waiting_external", "PARSE_RESULT_LINK_UNAVAILABLE", batch_id)
+    waiting = _expect(f.client.get(status_path), 200)
+    assert (waiting["id"], waiting["status"], waiting["error_code"]) == (run_id, "waiting_external", "PARSE_RESULT_LINK_UNAVAILABLE")
+    assert _accept(f, original_headers) == _accept(f) == {"parse_run_id": run_id, "status": "waiting_external"}
+    assert _expect(f.client.get(status_path + "/blocks"), 200)["items"] == []
+    with f.app.state.session_factory() as db:
+        assert db.get(parse_jobs.ParseServiceJob, run_id).raw_result_file_id is None
+        assert db.get(DocumentVersion, f.version_id).publish_status == "draft"
+        scanned = scan_once(db, f.config, f.app.state.service_endpoints)
+        assert all(job["id"] != run_id for job in scanned["jobs"])
+    initial = _calls(f, run_id)
+    assert [(r.method, r.purpose, r.state, r.response_status) for r in initial] == [
+        ("POST", "api", "received", 200), ("PUT", "upload", "received", 200),
+        ("GET", "api", "received", 200), ("GET", "download", "failed", 410),
+    ]
+    if renewed and f.config.database_url.startswith("postgresql") and os.environ.get("DATACENTER_TEST_EXPIRED_LINK_CHROME"):
+        _observe_expired_result_link(f, run_id)
+    assert len(f.provider.requests) == 4
+    if not renewed:
+        for call_count in range(6, call_limit + 1, 2):
+            assert _advance(f, run_id) == ("waiting_external", "PARSE_RESULT_LINK_UNAVAILABLE", batch_id)
+            assert len(f.provider.requests) == call_count
+    link_expired = False
+    outcome = _advance(f, run_id)
+    calls = _calls(f, run_id)
+    if renewed:
+        assert outcome == ("needs_review", None, batch_id)
+        assert [(r.method, r.target.partition("?")[0]) for r in f.provider.requests[4:]] == [
+            ("GET", POLL_PATH + batch_id), ("GET", DOWNLOAD_PATH + batch_id),
+        ]
+        assert calls[3].target_hash != calls[5].target_hash
+        assert (calls[5].purpose, calls[5].state, calls[5].response_status) == ("download", "received", 200)
+        assert _expect(f.client.get(status_path), 200)["status"] == "needs_review"
+    else:
+        assert outcome == ("reconciliation_required", "PARSE_RESULT_RECOVERY_BUDGET_EXHAUSTED", batch_id)
+        assert _accept(f) == {"parse_run_id": run_id, "status": "reconciliation_required"}
+        assert _advance(f, run_id) == outcome and len(f.provider.requests) == len(calls) == call_limit
+        assert all(request.method == "GET" for request in f.provider.requests[4:])
+        _cancel_selected_parse(f, run_id)
+        denied = f.client.post(f.path, json=_MODE, headers=_headers())
+        assert denied.status_code == 409 and denied.json()["code"] == "PARSE_RECONCILIATION_REQUIRED"
+        assert _advance(f, run_id) == ("cancelled", "PARSE_CANCELLED", batch_id)
+        assert len(f.provider.requests) == call_limit
+    assert [r.id for r in calls[:4]] == [r.id for r in initial]
+    assert sum(request.method == "POST" for request in f.provider.requests) == 1
 
 
 def test_worker_refuses_to_initialize_an_unmigrated_database(tmp_path):

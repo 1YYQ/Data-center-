@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { api, etag, id } from "../../api";
 import { formValues, text } from "../../components";
 import { stateLabel } from "../../labels";
@@ -9,6 +9,7 @@ import { blockPage } from "./types";
 import type { Block, BlockRelation, ChunkSet, Confirmation, ParseBlocks, ParsePage, ParsePages, ParseRun, SourceIssue, Version } from "./types";
 
 type Perform = (action: () => Promise<void>, success?: string) => Promise<void>;
+type CorrectBlock = NonNullable<ComponentProps<typeof BlockReview>["onCorrect"]>;
 const cancellable = new Set(["pending", "running", "waiting_external", "reconciliation_required"]);
 const pageLimit = 50;
 const sliceKeys = ["rows", "source_parts", "formula_symbols", "latex_raw", "mathml_raw", "asset_parts"];
@@ -34,6 +35,7 @@ export function ParseReview({ base, version, runs, run, current, blocks, pages, 
   const canManageSource = version.publish_status === "draft" || version.publish_status === "effective";
   const wasPublished = Boolean(current?.was_published || blocks?.was_published || (version.publish_status === "effective" && exactSelection));
   const sourceReadOnly = !canManageSource || wasPublished;
+  const canCorrect = Boolean(blocks?.ir_schema_version) && Boolean(current && ["local", "manual", "reprocess"].includes(current.origin || ""));
   const currentState = current && processingLabel(current.status, stateLabel(current.status));
   const total = pages?.total_page_count ?? current?.total_page_count;
   return <section aria-labelledby="pdf-review-title" className="pdf-review">
@@ -82,15 +84,27 @@ export function ParseReview({ base, version, runs, run, current, blocks, pages, 
     </div>}
     {blocks && current && <EvidenceReview key={run} base={base} run={run} current={current} blocks={blocks} initialPages={pages}
       immutable={sourceReadOnly || (Boolean(blocks.ir_schema_version) && !blocks.milestones?.structured)}
-      perform={perform} onChange={onChange} openConfirm={openConfirm} />}
+      perform={perform} onChange={onChange} openConfirm={openConfirm} onCorrect={canCorrect ? correctBlock : undefined} />}
     {run && blocks && <CollectionReview base={base} version={version} run={run} blocks={blocks} sets={sets} chunk={chunk}
       confirmations={confirmations} perform={perform} selectedChunk={selectedChunk} onChange={onChange} say={say} openPublication={openPublication} />}
   </section>;
+
+  function correctBlock(edit: Parameters<CorrectBlock>[0]) {
+    return perform(async () => {
+      if (!edit.kind && edit.text === undefined) throw Error("请修改文字或内容类型后再提交。");
+      if ((edit.text !== undefined && !edit.text.trim()) || !edit.reason || !edit.basis.description) {
+        throw Error("请填写修正文字、原因和原页对照依据。");
+      }
+      const result = await api.mutate<{ parse_run_id: string }>(`/parse-runs/${id(run)}/corrections`, { blocks: [edit] });
+      await onRequested(result.parse_run_id);
+      say("修正已受理。后台生成新批次后，请重新核验。");
+    });
+  }
 }
 
-function EvidenceReview({ run, base, blocks, current, initialPages, immutable, perform, onChange, openConfirm }: {
+function EvidenceReview({ run, base, blocks, current, initialPages, immutable, perform, onChange, openConfirm, onCorrect }: {
   run: string; base: string; blocks: ParseBlocks; current: ParseRun; initialPages: ParsePages | null; immutable: boolean;
-  perform: Perform; onChange: () => Promise<void>; openConfirm: () => void;
+  perform: Perform; onChange: () => Promise<void>; openConfirm: () => void; onCorrect?: CorrectBlock;
 }) {
   const [extraPages, setExtraPages] = useState<ParsePages | null>(null);
   const [jumpedPage, setJumpedPage] = useState<ParsePage>();
@@ -192,8 +206,7 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
           <h4 id="pdf-page-title" tabIndex={-1}>{pageNumber === "structure" ? "文档结构" : `PDF 第 ${pageNumber} 页`}</h4>
           {typeof pageNumber === "number" && <OriginalLink base={base} page={pageNumber} />}
           {currentPage && <p className="locator">
-            {processingLabel(currentPage.state, stateLabel(currentPage.state))} · {processingLabel(currentPage.page_class)} · {currentPage.printed_page ?
-              `印刷页码 ${currentPage.printed_page}${currentPage.printed_page_basis ? "（已有定位依据）" : "（依据待核对）"}` : "印刷页码待核对"}
+            {processingLabel(currentPage.state, stateLabel(currentPage.state))} · {processingLabel(currentPage.page_class)} · {sourcePageLabel(currentPage)}
             {currentPage.coverage.blank_basis === "no_text_images_or_drawings" && " · 未发现原生文字、图片或图形"}
           </p>}
           {currentPage && Boolean(currentPage.coverage.image_candidate_count || currentPage.coverage.vector_candidate_count) &&
@@ -211,7 +224,7 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
             {visibleBlocks.map(block => <BlockReview key={`${block.id}-${block.revision}`} block={block} run={run} base={base} immutable={immutable}
               critical={blocks.source_qc?.critical_refs?.[block.id] ?? []} confirmationMissing={missingCritical.has(block.id)}
               parent={block.parent_block_id ? byId.get(block.parent_block_id) : undefined} children={childGroups.get(block.id) ?? []}
-              onJump={jumpToBlock} onSave={(choice, reason) => saveBlock(block, choice, reason)} />)}
+              onJump={jumpToBlock} onSave={(choice, reason) => saveBlock(block, choice, reason)} onCorrect={onCorrect} />)}
           </div>
         </div>
       </div>}
@@ -230,6 +243,16 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
       setFocusTarget({ elementId: `review-block-${block.id}` });
     }, "逐块核验结果已保存。");
   }
+}
+
+function sourcePageLabel(page: ParsePage) {
+  const basis = page.printed_page_basis;
+  const printed = page.printed_page ? `印刷页码 ${page.printed_page}${basis ? "（已有定位依据）" : "（依据待核对）"}` : "印刷页码待核对";
+  if (basis && typeof basis === "object" && "kind" in basis && basis.kind === "pdf_page_labels" &&
+      "label" in basis && typeof basis.label === "string") {
+    return `PDF 页标签 ${basis.label} · ${printed}`;
+  }
+  return printed;
 }
 
 function IssueList({ issues, onJump }: { issues: SourceIssue[]; onJump: (issue: SourceIssue) => void }) {

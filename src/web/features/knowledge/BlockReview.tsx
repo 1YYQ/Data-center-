@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { api, id } from "../../api";
+import { formValues, text } from "../../components";
 import { processingLabel } from "./processingLabels";
 import { blockPage } from "./types";
 import type { Block } from "./types";
+
+const correctableKinds = new Set(["paragraph", "title", "step", "warning", "header", "footer", "footnote", "caption", "ref_text", "aside_text", "page_number"]);
+type TextCorrection = { block_id: string; text?: string; kind?: string; reason: string; basis: { file_page: number; description: string } };
 
 export function OriginalLink({ base, page, label }: { base: string; page?: number; label?: string }) {
   return <a href={base + "/file" + (page ? "#page=" + page : "")} target="_blank" rel="noopener noreferrer">
@@ -73,7 +77,7 @@ function RecognizedTable({ block, run }: { block: Block; run: string }) {
   </div>;
 }
 
-export function BlockReview({ block, run, base, immutable, critical, confirmationMissing, onSave, onJump, parent, children }: {
+export function BlockReview({ block, run, base, immutable, critical, confirmationMissing, onSave, onCorrect, onJump, parent, children }: {
   block: Block;
   run: string;
   base: string;
@@ -81,6 +85,7 @@ export function BlockReview({ block, run, base, immutable, critical, confirmatio
   critical: string[];
   confirmationMissing: boolean;
   onSave: (choice: string, reason: string) => Promise<void>;
+  onCorrect?: (edit: TextCorrection) => Promise<void>;
   onJump: (block: Block) => void;
   parent?: Block;
   children: Block[];
@@ -107,7 +112,8 @@ export function BlockReview({ block, run, base, immutable, critical, confirmatio
     {block.kind === "table" && block.structured_content?.rows?.length ? <RecognizedTable block={block} run={run} /> :
       block.text && <blockquote>{block.text}</blockquote>}
     {critical.length > 0 && <p className="locator">关键内容 {critical.map(tag => processingLabel(tag, "其他")).join("、")}{confirmationMissing && " · 缺少有效专业确认"}</p>}
-    {page && <p className="locator">PDF 第 {page} 页 · {printing ? `印刷页码 ${printing}` : "印刷页码待核对"}{extraction === "mineru_basic_ocr" && " · OCR"}</p>}
+    {page && <p className="locator">PDF 第 {page} 页 · {printing ? `印刷页码 ${printing}` : "印刷页码待核对"}{extraction === "mineru_basic_ocr" && " · OCR"}
+      {block.source_kind === "manual" && " · 人工修正内容"}</p>}
     {page ? <OriginalLink base={base} page={page} /> : !container && <p className="locator">{block.locator.section || "原文页序未知"}</p>}
     {parent && <p className="locator">所属结构 <button type="button" className="ghost" onClick={() => onJump(parent)}>{blockName(parent)}</button></p>}
     {container && <p className="muted">按子项覆盖、阅读顺序和适用关系核验此结构。</p>}
@@ -130,5 +136,27 @@ export function BlockReview({ block, run, base, immutable, critical, confirmatio
       <input aria-label={`内容块 ${block.ordinal} 核验说明`} value={reason} onChange={event => setReason(event.target.value)} placeholder="核验说明" />
       <button className="ghost" onClick={() => void onSave(choice, reason)}>保存核验</button>
     </>)}
+    {onCorrect && !immutable && page && block.structure_role === "leaf" && correctableKinds.has(block.kind) &&
+      (block.source_kind === "parser" || block.source_kind === "manual") && <details>
+        <summary>按原文修正此块</summary>
+        <form className="stack" onSubmit={event => {
+          event.preventDefault();
+          const values = formValues(event);
+          const edited = String(values.get("corrected_text") ?? "");
+          const kind = text(values, "corrected_kind");
+          void onCorrect({ block_id: block.id,
+            ...(edited !== block.text ? { text: edited } : {}), ...(kind ? { kind } : {}),
+            reason: text(values, "reason"), basis: { file_page: page, description: text(values, "source_basis") } });
+        }}>
+          <label>修正后文字<textarea name="corrected_text" rows={4} defaultValue={block.text} required maxLength={12000} /></label>
+          {["paragraph", "ref_text", "aside_text"].includes(block.kind) && <label>修正内容类型<select name="corrected_kind">
+            <option value="">沿用当前类型</option><option value="warning">警告</option>
+            {block.kind !== "aside_text" && <option value="step">操作步骤</option>}
+          </select></label>}
+          <label>修正原因<input name="reason" required maxLength={500} /></label>
+          <label>原页对照依据<input name="source_basis" required maxLength={1000} /></label>
+          <div><button type="submit" className="ghost">提交修正批次</button></div>
+        </form>
+      </details>}
   </article>;
 }

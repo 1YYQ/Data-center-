@@ -31,11 +31,7 @@ def _result(mode, *, warnings=()):
 
 def _eligible(db, actor, version, document, model, context):
     return (version is not None and document is not None and document.deleted_at is None and model in version.model_scope
-            and governance.publication_is_current(db, version)
-            and governance.can_read_version(db, actor, version)
-            and governance.can_read_version(db, actor, version, "knowledge.query")
-            and can_access_document(db, actor, document, context=context)
-            and can_access_document(db, actor, document, "knowledge.query", context=context))
+            and governance.published_query_is_readable(db, actor, version, document, context=context))
 
 
 def _group_order(groups, root, consumed):
