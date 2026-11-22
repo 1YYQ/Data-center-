@@ -374,3 +374,139 @@ def test_native_tree_reader_refuses_directory_junction(tmp_path):
             os.rmdir(link)
         else:
             link.unlink()
+
+
+@pytest.mark.parametrize("failure", ["missing_sdk", "reader_timeout", "access_revoked"])
+def test_preparation_failure_recovers_only_original_authorized_task(local_stack, tmp_path, monkeypatch, failure):
+    """Real preparation failures precede admission; recovery uses HTTP + real SDK.
+
+    Only the timeout duration and fixed fault program are injected. The upstream
+    is this module's explicit local synthetic service, never a paid provider.
+    """
+    import shutil
+    from . import worker
+    db, config, client, address, employee, _, kb, _, _, requests, _ = local_stack
+    original_root, original_program = worker.RUNTIME, worker._TREE_HASH_PROGRAM
+    native_children, watchdogs, watchdog_fired = [], [], []
+    if failure == "reader_timeout":
+        # Exercise subprocess.run's real timeout/kill path without waiting 300s.
+        hanging_program = "setInterval(() => {}, 1000);"
+        original_run, original_popen = worker.subprocess.run, worker.subprocess.Popen
+
+        def capture_child(command, *args, **kwargs):
+            child = original_popen(command, *args, **kwargs)
+            if command[1:] == ["-e", hanging_program]:
+                native_children.append(child)
+                def stop_unbounded_writer():
+                    watchdog_fired.append(True)
+                    if child.poll() is None:
+                        child.kill()
+                watchdog = threading.Timer(3, stop_unbounded_writer)
+                watchdogs.append(watchdog)
+                watchdog.start()
+            return child
+
+        def short_timeout(command, *args, **kwargs):
+            if command[1:] == ["-e", hanging_program]:
+                kwargs["timeout"] = .25
+            return original_run(command, *args, **kwargs)
+
+        monkeypatch.setattr(worker, "_TREE_HASH_PROGRAM", hanging_program)
+        monkeypatch.setattr(worker.subprocess, "Popen", capture_child)
+        monkeypatch.setattr(worker.subprocess, "run", short_timeout)
+    else:
+        broken_root = tmp_path / "incomplete-sdk"
+        broken_root.mkdir()
+        shutil.copytree(original_root / "dist", broken_root / "dist")
+        for name in ("package.json", "package-lock.json"):
+            shutil.copyfile(original_root / name, broken_root / name)
+        (broken_root / "node_modules").mkdir()
+        monkeypatch.setattr(worker, "RUNTIME", broken_root)
+    task_id = submit(client, kb)
+    try:
+        assert run_one(config, gateway_url=address)["error_code"] == "RUNTIME_ARTIFACT_CHANGED"
+    finally:
+        for watchdog in watchdogs:
+            watchdog.cancel()
+    assert not watchdog_fired, "Reader timeout did not bound the Windows inventory stdin write"
+    task = db.get(QueryTask, task_id, populate_existing=True)
+    assert task.status == "blocked" and not requests
+    assert not db.scalar(select(AgentRun.id).where(AgentRun.task_id == task_id))
+    assert not db.scalar(select(ModelCallAdmission.id).where(ModelCallAdmission.task_id == task_id))
+    assert db.get(TaskBudget, task_id) is None
+    assert client.get(f"/tasks/{task_id}/result").status_code == 409
+    assert all(child.poll() is not None for child in native_children)
+    if failure == "reader_timeout":
+        assert len(native_children) == 1
+    monkeypatch.setattr(worker, "RUNTIME", original_root)
+    monkeypatch.setattr(worker, "_TREE_HASH_PROGRAM", original_program)
+    assert run_one(config, gateway_url=address)["state"] == "idle"
+    assert not requests  # Repair alone never silently replays a blocked task.
+    if failure == "access_revoked":
+        from .models import utc_now
+        grant = db.scalar(select(AuthorizationGrant).where(
+            AuthorizationGrant.subject_user_id == employee.id, AuthorizationGrant.operation == "knowledge.query"))
+        grant.revoked_at = utc_now()
+        db.commit()
+    response = client.post(f"/tasks/{task_id}/retry", json={"reason": "SYNTHETIC preparation repaired"},
+        headers={"Idempotency-Key": uuid4().hex, "If-Match": f'"{task.revision}"'})
+    if failure == "access_revoked":
+        assert response.status_code == 403 and response.json()["code"] == "ACCESS_LIMITED", response.text
+        assert not requests
+        assert not db.scalar(select(AgentRun.id).where(AgentRun.task_id == task_id))
+        return
+    assert response.status_code == 202 and response.json()["task_id"] == task_id, response.text
+    assert run_one(config, gateway_url=address)["state"] == "succeeded"
+    task = db.get(QueryTask, task_id, populate_existing=True)
+    assert task.execution_revision == 2
+    result = client.get(f"/tasks/{task_id}/result")
+    assert result.status_code == 200 and WARNING in result.json()["answer"]
+    assert len(requests) == 2 and db.get(TaskBudget, task_id).reserved_calls == 2
+
+
+def test_reader_timeout_bounds_large_inventory_delivery(tmp_path, monkeypatch):
+    from . import worker
+    # Exceeds pipe capacity, independently of the installed SDK size/cache.
+    for number in range(2400):
+        (tmp_path / (f"module-{number:04d}-" + "x" * 100 + ".js")).write_bytes(b"x")
+    hanging_program = "setInterval(() => {}, 1000);"
+    original_run, original_popen = worker.subprocess.run, worker.subprocess.Popen
+    children, timers, watchdog_fired, delivery = [], [], [], []
+
+    def capture(command, *args, **kwargs):
+        child = original_popen(command, *args, **kwargs)
+        children.append(child)
+        def stop_unbounded_write():
+            watchdog_fired.append(True)
+            if child.poll() is None:
+                child.kill()
+        timer = threading.Timer(3, stop_unbounded_write)
+        timer.start()
+        timers.append(timer)
+        return child
+
+    def short_timeout(*args, **kwargs):
+        kwargs["timeout"] = .25
+        delivery.append({"input_bytes": len(kwargs.get("input", b"")),
+                         "file_stdin": kwargs.get("stdin") is not None,
+                         "reader": worker._installed_tree.__code__.co_filename})
+        try:
+            return original_run(*args, **kwargs)
+        except worker.subprocess.SubprocessError as error:
+            delivery[-1]["error"] = type(error).__name__
+            raise
+
+    monkeypatch.setattr(worker, "_TREE_HASH_PROGRAM", hanging_program)
+    monkeypatch.setattr(worker.subprocess, "Popen", capture)
+    monkeypatch.setattr(worker.subprocess, "run", short_timeout)
+    try:
+        with pytest.raises(worker.SafeError) as error:
+            worker._installed_tree(tmp_path)
+        assert error.value.code == "RUNTIME_ARTIFACT_CHANGED"
+    finally:
+        for timer in timers:
+            timer.cancel()
+    assert children and all(child.poll() is not None for child in children)
+    assert delivery and (delivery[0]["input_bytes"] > 600000 or delivery[0]["file_stdin"]), delivery
+    assert delivery[0].get("error") == "TimeoutExpired", delivery
+    assert not watchdog_fired, "Configured timeout failed to bound inventory delivery"

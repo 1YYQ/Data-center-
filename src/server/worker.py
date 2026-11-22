@@ -18,6 +18,7 @@ import re
 import shutil
 import stat
 import subprocess
+import tempfile
 import threading
 import time
 from uuid import UUID
@@ -155,10 +156,17 @@ def _installed_tree(root, node=None):
     items = [{"name": name, "path": str(root / name), "size": str(info[0]), "mtime": str(info[1])}
              for name, info in files.items()]
     try:
-        result = subprocess.run(
-            [node or shutil.which("node"), "-e", _TREE_HASH_PROGRAM],
-            input=json.dumps(items).encode(), capture_output=True, check=True, timeout=300,
-            env=_child_environment())
+        # On Windows communicate(input=...) writes the pipe synchronously before
+        # waiting with its timeout. A child that never reads stdin can therefore
+        # block indefinitely on a large inventory. A private, closed-on-exit file
+        # avoids that pipe write; the real child timeout can kill/reap the reader.
+        with tempfile.TemporaryFile() as inventory:
+            inventory.write(json.dumps(items).encode())
+            inventory.seek(0)
+            result = subprocess.run(
+                [node or shutil.which("node"), "-e", _TREE_HASH_PROGRAM],
+                stdin=inventory, capture_output=True, check=True, timeout=300,
+                env=_child_environment())
         hashes = json.loads(result.stdout)
         if (not isinstance(hashes, dict) or hashes.keys() != files.keys()
                 or any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
