@@ -1,6 +1,7 @@
 """CPU-only dense BGE-M3 from the previously verified offline snapshot."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import lru_cache
 from hashlib import file_digest, sha256
@@ -38,6 +39,9 @@ _RUNTIME = {"sentence-transformers": "5.5.0", "torch": "2.12.0", "transformers":
             "tokenizers": "0.22.2", "numpy": "2.4.2"}
 _IGNORED = {".gitattributes", "README.md", "configuration.json", "colbert_linear.pt", "imgs", "long.jpg", "onnx", "sparse_linear.pt"}
 _MODEL_LOCK = Lock()
+# Start one inference thread on first use. Calling Torch from new threads can
+# retain native workers even after those calling threads have stopped.
+_MODEL_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="local-bge")
 
 
 def profile() -> dict:
@@ -108,26 +112,42 @@ def _load(directory: Path, stats: tuple):
         raise ProviderError("LOCAL_BGE_LOAD_FAILED") from None
 
 
+def _preload(directory: Path) -> None:
+    _load(directory, _model_files(directory))
+
+
+def _encode(directory: Path, texts: list[str]) -> list[list[float]]:
+    stats = _model_files(directory)
+    model = _load(directory, stats)
+    counts = model.processor(texts, add_special_tokens=True, padding=False,
+                             truncation=False, return_length=True)["length"]
+    if any(count > _MAX_TOKENS for count in counts):
+        raise ProviderError("PROVIDER_INVALID_INPUT")
+    vectors = model.encode(texts, batch_size=4, convert_to_numpy=True,
+                           normalize_embeddings=False, show_progress_bar=False).tolist()
+    if _model_files(directory) != stats:
+        raise ProviderError("LOCAL_BGE_SNAPSHOT_CHANGED")
+    return vectors
+
+
 @dataclass(frozen=True)
 class LocalBgeEndpoint:
     directory: Path
 
+    def preload(self) -> None:
+        with _MODEL_LOCK:
+            _MODEL_EXECUTOR.submit(_preload, self.directory).result()
+
     def embed(self, texts: list[str]) -> dict:
-        if (not isinstance(texts, list) or not 1 <= len(texts) <= 32
-                or not all(_valid_text(text, _MAX_TEXT_BYTES) for text in texts)):
+        if not isinstance(texts, list) or not 1 <= len(texts) <= 32:
+            raise ProviderError("PROVIDER_INVALID_INPUT")
+        texts = texts.copy()
+        if not all(_valid_text(text, _MAX_TEXT_BYTES) for text in texts):
             raise ProviderError("PROVIDER_INVALID_INPUT")
         try:
+            # Acquire before submitting so waiting callers cannot grow the executor queue.
             with _MODEL_LOCK:
-                stats = _model_files(self.directory)
-                model = _load(self.directory, stats)
-                counts = model.processor(texts, add_special_tokens=True, padding=False,
-                                         truncation=False, return_length=True)["length"]
-                if any(count > _MAX_TOKENS for count in counts):
-                    raise ProviderError("PROVIDER_INVALID_INPUT")
-                vectors = model.encode(texts, batch_size=4, convert_to_numpy=True,
-                                       normalize_embeddings=False, show_progress_bar=False).tolist()
-                if _model_files(self.directory) != stats:
-                    raise ProviderError("LOCAL_BGE_SNAPSHOT_CHANGED")
+                vectors = _MODEL_EXECUTOR.submit(_encode, self.directory, texts).result()
         except ProviderError:
             raise
         except (OSError, ValueError, RuntimeError, OverflowError):

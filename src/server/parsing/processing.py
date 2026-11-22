@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,9 +29,14 @@ def page_binding(row):
 
 
 def _projection_rows(db, run_id):
-    pages = db.scalars(select(DocumentPage).where(DocumentPage.parse_run_id == run_id).order_by(DocumentPage.file_page)).all()
-    blocks = db.scalars(select(ContentBlock).where(ContentBlock.parse_run_id == run_id).order_by(ContentBlock.ordinal)).all()
-    relations = db.scalars(select(BlockRelation).where(BlockRelation.parse_run_id == run_id).order_by(BlockRelation.id)).all()
+    # Column values are fresh snapshots even if an ORM entity from an earlier
+    # proof is still in this Session's identity map. No snapshot escapes a call.
+    def rows(model, fields, order):
+        return [SimpleNamespace(**row) for row in db.execute(select(*(getattr(model, name) for name in fields))
+            .where(model.parse_run_id == run_id).order_by(*order)).mappings()]
+    pages = rows(DocumentPage, PAGE_FIELDS, (DocumentPage.file_page,))
+    blocks = rows(ContentBlock, (*BLOCK_FIELDS, "revision", "review_status"), (ContentBlock.ordinal,))
+    relations = rows(BlockRelation, RELATION_FIELDS, (BlockRelation.id,))
     return pages, blocks, relations
 
 
@@ -164,39 +170,72 @@ def _stage_failure(db, run, job, attempt, error, phase, fence_attempt):
     db.commit()
 
 
-def source_qc_is_current(db, run):
-    """A technical source gate, deliberately independent of human/ChunkSet review."""
+def _artifact_identities(db, identifiers):
+    """One current read of the artifact/file pairs used by one technical gate."""
+    return {row.artifact_id: row for row in db.execute(select(ParseArtifact.id.label("artifact_id"),
+        ParseArtifact.parse_run_id, FileObject.id.label("file_id"), FileObject.status.label("file_status"), FileObject.sha256)
+        .outerjoin(FileObject, FileObject.id == ParseArtifact.file_id)
+        .where(ParseArtifact.id.in_([value for value in identifiers if value])))}
+
+
+def _current_source_projection(db, run, *, read_projection_last=False):
+    """Return this technical gate's current projection, without caching authority."""
     from .quality import CHECKER_REVISION
     if not run or not run.ir_schema_version:
-        return False
+        return None
     report = run.stage_checkpoint.get("source_qc", {})
     outputs = run.stage_checkpoint.get("outputs", {})
     if (report.get("status") != "passed" or report.get("checker_revision") != CHECKER_REVISION
-            or report.get("checker_code_sha256") != checker_signature()
-            or report.get("projection_fingerprint") != projection_fingerprint(db, run.id)):
-        return False
+            or report.get("checker_code_sha256") != checker_signature()):
+        return None
+    if not read_projection_last:
+        rows = _projection_rows(db, run.id)
+        projection_hash = _projection_fingerprint(*rows)
+        if report.get("projection_fingerprint") != projection_hash:
+            return None
     expected = {"normalized_ir": "normalized_ir_sha256", "structured_ir": "structured_ir_sha256", "raw_manifest": "raw_manifest_sha256",
                 "source_qc": "source_qc_sha256"}
+    identities = _artifact_identities(db, (outputs.get(name) for name in expected))
     for name, sha_name in expected.items():
-        artifact = db.get(ParseArtifact, outputs.get(name)) if outputs.get(name) else None
-        file = db.get(FileObject, artifact.file_id) if artifact else None
-        if not artifact or artifact.parse_run_id != run.id or not file or file.status != "available" or file.sha256 != outputs.get(sha_name):
-            return False
-        if name == "source_qc" and fingerprint(report) != file.sha256:
-            return False
-    version = db.get(DocumentVersion, run.document_version_id)
-    file = db.get(FileObject, version.source_file_id) if version else None
-    return bool(version and file and file.status == "available" and file.id == report.get("source_file_id")
-                and file.sha256 == report.get("source_sha256") and run.ir_artifact_id == outputs["structured_ir"])
+        item = identities.get(outputs.get(name))
+        if (not item or item.parse_run_id != run.id or not item.file_id or item.file_status != "available"
+                or item.sha256 != outputs.get(sha_name)):
+            return None
+        if name == "source_qc" and fingerprint(report) != item.sha256:
+            return None
+    original = db.execute(select(FileObject.id, FileObject.status, FileObject.sha256)
+        .join(DocumentVersion, DocumentVersion.source_file_id == FileObject.id)
+        .where(DocumentVersion.id == run.document_version_id)).one_or_none()
+    if (not original or original.status != "available" or original.id != report.get("source_file_id")
+            or original.sha256 != report.get("source_sha256") or run.ir_artifact_id != outputs["structured_ir"]):
+        return None
+    if read_projection_last:
+        # A scope match previously read its signed projection after the QC's
+        # artifact checks. Keep that late observation, without replaying rows.
+        rows = _projection_rows(db, run.id)
+        projection_hash = _projection_fingerprint(*rows)
+        if report.get("projection_fingerprint") != projection_hash:
+            return None
+    return rows, projection_hash
+
+
+def source_qc_is_current(db, run):
+    """A technical source gate, deliberately independent of human/ChunkSet review."""
+    return _current_source_projection(db, run) is not None
 
 
 def source_confirmation_scope(db, run):
     """Exact, read-only options for recording an actual person's statement."""
+    rows = _projection_rows(db, run.id)
+    return _confirmation_scope(run, rows, _projection_fingerprint(*rows))
+
+
+def _confirmation_scope(run, rows, projection_hash):
     from ..governance import block_binding
-    pages, blocks, relations = _projection_rows(db, run.id)
+    pages, blocks, relations = rows
     return {"parse_run_id": run.id, "ir_artifact_id": run.ir_artifact_id,
         "source_qc_ref": run.stage_checkpoint.get("outputs", {}).get("source_qc"),
-        "source_projection_hash": _projection_fingerprint(pages, blocks, relations),
+        "source_projection_hash": projection_hash,
         "block_bindings": {row.id: block_binding(row) for row in blocks if row.structure_role == "leaf"},
         "container_bindings": {row.id: row.content_hash for row in blocks if row.structure_role == "container"},
         "observation_bindings": {row.id: row.content_hash for row in blocks if row.structure_role == "observation"},
@@ -205,9 +244,10 @@ def source_confirmation_scope(db, run):
 
 
 def confirmation_scope_matches(db, run, scope):
-    if not source_qc_is_current(db, run):
+    projection = _current_source_projection(db, run, read_projection_last=True)
+    if projection is None:
         return False
-    expected = source_confirmation_scope(db, run)
+    expected = _confirmation_scope(run, *projection)
     for key in ("ir_artifact_id", "source_qc_ref", "source_projection_hash"):
         if scope.get(key) != expected[key]:
             return False

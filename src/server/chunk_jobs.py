@@ -118,13 +118,14 @@ def chunk_set_qc_is_current(db, chunk_set):
         return False
     if any(chunk_set.splitter_config.get(key) != value for key, value in registered.items()):
         return False
+    from .parsing.processing import _artifact_identities
+    identities = _artifact_identities(db, (outputs.get(key) for key in ("manifest", "quality")))
     for key in ("manifest", "quality"):
-        artifact = db.get(ParseArtifact, outputs.get(key)) if outputs.get(key) else None
-        file = db.get(FileObject, artifact.file_id) if artifact else None
-        if (not artifact or artifact.parse_run_id != run.id or not file or file.status != "available"
-                or file.sha256 != outputs.get(key + "_sha256")):
+        item = identities.get(outputs.get(key))
+        if (not item or item.parse_run_id != run.id or not item.file_id or item.file_status != "available"
+                or item.sha256 != outputs.get(key + "_sha256")):
             return False
-        if key == "quality" and fingerprint(quality) != file.sha256:
+        if key == "quality" and fingerprint(quality) != item.sha256:
             return False
     return True
 

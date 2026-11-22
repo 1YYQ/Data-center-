@@ -874,8 +874,7 @@ def serve(config_path: Path | str = DEFAULT_CONFIG, host: str = "127.0.0.1", por
             application.state.engine.dispose()
             raise RuntimeError("Pilot requires the approved local embedding endpoint")
         try:
-            with local_bge._MODEL_LOCK:
-                local_bge._load(endpoint.directory, local_bge._model_files(endpoint.directory))
+            endpoint.preload()
         except Exception:
             application.state.engine.dispose()
             raise

@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from . import governance as g
 from .governance_models import GovernanceEvidence
-from .models import BlockRelation, ChunkSet, ContentBlock, DocumentPage, DocumentVersion, ParseArtifact, ParseRun, User
+from .models import BlockRelation, ChunkSet, ContentBlock, DocumentPage, DocumentVersion, FileObject, ParseArtifact, ParseRun, User
 from .parsing.artifacts import read_artifact
 from .parsing.processing import (assert_structured_projection, load_structured_ir, projection_fingerprint,
     relation_review_state, run_source_qc, source_confirmation_scope, source_qc_is_current, source_verification, structure_parse_run)
@@ -111,3 +111,58 @@ def test_source_confirmation_keeps_legacy_projection_digest_and_one_row_snapshot
         blocks[0].text_content += ' SYNTHETIC mutation'
         db.commit()
         assert source_confirmation_scope(db, run)['source_projection_hash'] != old_digest
+
+
+@pytest.mark.parametrize('changed', ['artifact_status', 'original_status', 'block_text', 'relation_basis'])
+def test_source_gate_reads_committed_values_despite_retained_orm_entities(local_parse, changed):
+    """A second writer must invalidate a later proof without a KB revision bump."""
+    from sqlalchemy import update
+    from sqlalchemy.orm import Session
+    from .parsing.processing import confirmation_scope_matches
+    run_id = source_ready(local_parse)
+    with local_parse.app.state.session_factory() as reader:
+        run = reader.get(ParseRun, run_id)
+        scope = source_confirmation_scope(reader, run)
+        if changed == 'artifact_status':
+            artifact = reader.get(ParseArtifact, run.stage_checkpoint['outputs']['normalized_ir'])
+            retained = reader.get(FileObject, artifact.file_id)
+            model, field, new_value = FileObject, 'status', 'missing'
+        elif changed == 'original_status':
+            version = reader.get(DocumentVersion, run.document_version_id)
+            retained = reader.get(FileObject, version.source_file_id)
+            model, field, new_value = FileObject, 'status', 'missing'
+        elif changed == 'block_text':
+            retained = reader.scalar(select(ContentBlock).where(ContentBlock.parse_run_id == run_id))
+            model, field, new_value = ContentBlock, 'text_content', retained.text_content + ' SYNTHETIC concurrent change'
+        else:
+            retained = reader.scalar(select(BlockRelation).where(BlockRelation.parse_run_id == run_id))
+            model, field, new_value = BlockRelation, 'basis', {**retained.basis, 'synthetic_concurrent_change': True}
+        old_value = getattr(retained, field)
+        assert source_qc_is_current(reader, run)
+        with Session(local_parse.app.state.engine) as writer:
+            writer.execute(update(model).where(model.id == retained.id).values({field: new_value}))
+            writer.commit()
+        assert getattr(retained, field) == old_value  # Deliberately keep a stale ORM identity alive.
+        assert not source_qc_is_current(reader, run)
+        assert not confirmation_scope_matches(reader, run, scope)
+
+
+def test_confirmation_projection_keeps_its_late_observation(local_parse, monkeypatch):
+    from sqlalchemy import update
+    from sqlalchemy.orm import Session
+    from .parsing import processing
+    run_id = source_ready(local_parse)
+    with local_parse.app.state.session_factory() as reader:
+        run = reader.get(ParseRun, run_id)
+        scope = source_confirmation_scope(reader, run)
+        relation = reader.scalar(select(BlockRelation).where(BlockRelation.parse_run_id == run_id))
+        original = processing._artifact_identities
+        def change_after_artifact_read(db, identifiers):
+            result = original(db, identifiers)
+            with Session(local_parse.app.state.engine) as writer:
+                writer.execute(update(BlockRelation).where(BlockRelation.id == relation.id)
+                    .values(basis={**relation.basis, 'synthetic_late_change': True}))
+                writer.commit()
+            return result
+        monkeypatch.setattr(processing, '_artifact_identities', change_after_artifact_read)
+        assert not processing.confirmation_scope_matches(reader, run, scope)

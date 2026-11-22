@@ -1,6 +1,6 @@
 # 项目状态与续跑入口
 
-更新日期：2026-11-19。本轮核心三角色A–F模拟验收及必要修复已完成，VERIFIED_LOCAL_SYNTHETIC；实际百炼/BGE原任务恢复和正式答案/原页核对通过。具体结果与未覆盖项见[本轮验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md#本轮模拟三角色af2026-11-19)。此前本地实施已交付：PDF持久归档→两层IR/独立QC→离线切分→完整child代际→精确证据→受约束组织答案→网页分享及原页回查已实际连通。固定Standard完成真实离线合成PDF推理，实际Pi SDK/PostgreSQL/Chrome联合正负验证通过。首期真实业务验收仍EXTERNAL_PENDING，不将合成岗位、服务或签认升级为企业验收。本轮未修改事故默认SQLite、真实授权或部署，未外发企业资料。
+更新日期：2026-11-22。当前持续运行与89份同量级合成验证IN_PROGRESS，调度与续跑见下方当前实施及tasks顶部；旧核心三角色A–F模拟验收、百炼/BGE原任务和正式答案/原页核对已分段VERIFIED_LOCAL_SYNTHETIC，范围见[既有验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md#本轮模拟三角色af2026-11-19)。PDF归档→IR/QC→child代际→精确证据→受约束答案→分享/原页链路已有实际联合证据，不能据此升级持续容量、89份规模或企业验收。首期真实业务验收仍EXTERNAL_PENDING；不将合成岗位、服务或签认升级为企业验收，不外发企业资料或修改事故默认SQLite。
 
 本页是项目进度、证据边界和下一步的统一汇总入口。需求以 SPEC 为准，技术规则以对应设计为准，实际状态以当前工作区和运行证据为准；本页不产生业务确认、资料外发或新增开发授权。
 
@@ -18,7 +18,11 @@
 
 ## 当前本地实施
 
-本轮并发超时修复与本地容量验证已完成，DONE/VERIFIED_LOCAL_SYNTHETIC。根因为同次日志逐证据重复全源复核、隐藏历史无界读取叠加SDK整轮时限；已改批量复核、保持原指纹的单次行投影、按需历史分页和事务性有界受理。实际BGE/SDK1/2/4波次、10页整库单消费者4项排队、正式Chrome及一次最终真实百炼混合读取均通过；权限、签认、证据、未知与预算围栏及20s/25s/90s时限未降低。日常试点固定1项执行＋3项等待，第5项明确拒绝；短时4路通过不能作为持续4路或89份手册容量承诺。数值和样本边界见[metrics](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#本地并发与容量2026-11-19)，运行限制见[operations](../../specs/001-device-operation-maintenance-query/operations.md#本地容量边界2026-11-19)。原持久8879已恢复、Pi rev5，前轮原任务/预算/快照保全；六个临时PG均清理、默认SQLite哈希不变、备份继续Disabled。最终候选/已批准Git分支回溯见[tasks](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)和outputs/pilot-capacity/2026-11-19/candidate-final.json。本授权内无待推进工程项，真实组织验收仍只暂停其依赖链。
+2026-11-21–22新增授权：持续运行与89份同量级合成验证IN_PROGRESS。单执行/三排队、回环生成、完整证据与权限不降。首次持续28项及真实BGE恢复通过后，资源趋势暴露原生线程驻留；现已固定模型推理线程，实际短对照保持旧向量且资源不累积，正在新绑定下重跑完整持续/恢复。89份6372页已完成真实归档/QC/模拟核验与发布准备，目标索引与查询容量尚待放行测量；111页跨来源反例保留，不放宽20s/25s/90s。数值唯一见[metrics](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#持续运行与资料规模2026-11-21进行中)，当前范围/屏障及接续只在[tasks顶部](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)维护。备份停用，其他容器未暂停，未付费压测或外发企业资料。
+
+### 既有本地交付（截至2026-11-19）
+
+前轮并发超时修复与本地容量验证已完成，DONE/VERIFIED_LOCAL_SYNTHETIC。根因为同次日志逐证据重复全源复核、隐藏历史无界读取叠加SDK整轮时限；已改批量复核、保持原指纹的单次行投影、按需历史分页和事务性有界受理。实际BGE/SDK1/2/4波次、10页整库单消费者4项排队、正式Chrome及一次最终真实百炼混合读取均通过；权限、签认、证据、未知与预算围栏及20s/25s/90s时限未降低。日常试点固定1项执行＋3项等待，第5项明确拒绝；短时4路通过不能作为持续4路或89份手册容量承诺。数值和样本边界见[metrics](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#本地并发与容量2026-11-19)，运行限制见[operations](../../specs/001-device-operation-maintenance-query/operations.md#本地容量边界2026-11-19)。原持久8879已恢复、Pi rev5，前轮原任务/预算/快照保全；六个临时PG均清理、默认SQLite哈希不变、备份继续Disabled。最终候选/已批准Git分支回溯见[tasks](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)和outputs/pilot-capacity/2026-11-19/candidate-final.json。该轮授权内无待推进工程项，真实组织验收仍只暂停其依赖链；后续新增授权以上方当前调度为准。
 
 三角色核心模拟A–F已VERIFIED_LOCAL_SYNTHETIC：异常和补型号、草稿/版本冲突、回答分享/资料撤权及缓存清除、真实离线解析与校正/独立QC、服务与原批次恢复均有分段网页/HTTP证据。最终qwen3.8-flash＋实际Pi SDK＋本地BGE/PGvector在同一持久原任务完成第2修订，六条来源和原PDF核对通过，累计五份真实回执及原预算保留；冷模型准备已前移至接受查询之前。权限/版本场景的正例使用生产child工具与真实回环回执，不能称每个场景均重跑SDK；并行回环短时限失败保留，不作生产容量达标结论。当前授权内无剩余就绪项；完整企业A–F仍EXTERNAL_PENDING，扩展场景和真实签认不因核心模拟通过而关闭。源/证据/下一入场以tasks顶部及本轮验收为准。
 
