@@ -172,25 +172,6 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
   }
 
   return <>
-    <section className="pdf-review-section" aria-labelledby="pdf-milestones-title">
-      <h3 id="pdf-milestones-title">技术处理与人工核验</h3>
-      <details><summary>查看处理与源核验状态</summary><dl className="pdf-milestones">
-        <div><dt>原始解析</dt><dd>{blocks.milestones?.parsed || current.artifact_manifest_ref ? "已归档" : modern || current.processing_stage ? "尚未归档" : "无历史记录"}</dd></div>
-        <div><dt>归一化</dt><dd>{blocks.milestones?.normalized ? "已对齐原页" : modern ? "未完成" : "尚无原页投影"}</dd></div>
-        <div><dt>结构恢复</dt><dd>{blocks.milestones?.structured ? "已恢复" : modern ? "未完成" : "尚无结构投影"}</dd></div>
-        <div><dt>源质量检查</dt><dd>{blocks.source_qc ? processingLabel(blocks.source_qc.status, stateLabel(blocks.source_qc.status)) : "尚无检查报告"}</dd></div>
-        <div><dt>源人工核验</dt><dd>{sourceVerification?.state === "verified" ? "已核验" :
-          sourceVerification?.state === "rejected" ? "已退回" : modern ? "待核验" : "按历史内容核验"}</dd></div>
-      </dl></details>
-      {!!sourceVerification?.reasons.length && <ul className="pdf-review-reasons">
-        {sourceVerification.reasons.map(reason => <li key={reason}>{processingLabel(reason, "源核验仍有未解决事项。")}</li>)}
-      </ul>}
-      {sourceVerification && <button className="ghost" onClick={openConfirm}>{sourceVerification.state === "verified" ? "查看业务确认依据" : "转到业务依据"}</button>}
-      {issues.length > 0 && <details className="pdf-issues">
-        <summary>查看 {issues.length} 项源质量问题</summary>
-        <IssueList issues={issues} onJump={jumpToIssue} />
-      </details>}
-    </section>
     {modern ? <section className="pdf-review-section" aria-labelledby="pdf-pages-title">
       <div className="pdf-page-heading"><h3 id="pdf-pages-title">逐页对照原文</h3>
         {typeof initialPages?.total_page_count === "number" && <span className="locator">共 {initialPages.total_page_count} 页</span>}</div>
@@ -238,6 +219,25 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
         onSave={(choice, reason) => saveBlock(block, choice, reason)} />)}
       {!visibleBlocks.length && <p className="muted">尚无可核验内容块。请刷新查看后台处理进度。</p>}
     </div></div>}
+    <section className="pdf-review-section" aria-labelledby="pdf-milestones-title">
+      <h3 id="pdf-milestones-title">技术处理与人工核验</h3>
+      <details><summary>查看处理与源核验状态</summary><dl className="pdf-milestones">
+        <div><dt>原始解析</dt><dd>{blocks.milestones?.parsed || current.artifact_manifest_ref ? "已归档" : modern || current.processing_stage ? "尚未归档" : "无历史记录"}</dd></div>
+        <div><dt>归一化</dt><dd>{blocks.milestones?.normalized ? "已对齐原页" : modern ? "未完成" : "尚无原页投影"}</dd></div>
+        <div><dt>结构恢复</dt><dd>{blocks.milestones?.structured ? "已恢复" : modern ? "未完成" : "尚无结构投影"}</dd></div>
+        <div><dt>源质量检查</dt><dd>{blocks.source_qc ? processingLabel(blocks.source_qc.status, stateLabel(blocks.source_qc.status)) : "尚无检查报告"}</dd></div>
+        <div><dt>源人工核验</dt><dd>{sourceVerification?.state === "verified" ? "已核验" :
+          sourceVerification?.state === "rejected" ? "已退回" : modern ? "待核验" : "按历史内容核验"}</dd></div>
+      </dl></details>
+      {!!sourceVerification?.reasons.length && <ul className="pdf-review-reasons">
+        {sourceVerification.reasons.map(reason => <li key={reason}>{processingLabel(reason, "源核验仍有未解决事项。")}</li>)}
+      </ul>}
+      {sourceVerification && <button className="ghost" onClick={openConfirm}>{sourceVerification.state === "verified" ? "查看业务确认依据" : "转到业务依据"}</button>}
+      {issues.length > 0 && <details className="pdf-issues">
+        <summary>查看 {issues.length} 项源质量问题</summary>
+        <IssueList issues={issues} onJump={jumpToIssue} />
+      </details>}
+    </section>
   </>;
 
   function saveBlock(block: Block, choice: string, reason: string) {

@@ -135,7 +135,7 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
                     page.get_by_label("问题", exact=True).fill(question)
                     page.get_by_label("设备型号（可选）", exact=True).fill(MODEL)
                     with page.expect_response(lambda response: response.url.endswith("/knowledge/queries") and response.request.method == "POST") as reply:
-                        page.get_by_role("button", name="提交工作", exact=False).click()
+                        page.get_by_role("button", name="查询资料", exact=False).click()
                     return reply.value
 
                 accepted = submit("SYNTHETIC fourth admitted work")

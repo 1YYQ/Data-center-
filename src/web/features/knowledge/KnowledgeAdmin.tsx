@@ -8,6 +8,7 @@ import { LifecyclePanel } from "./lifecycle";
 import { SourceForm } from "./source";
 import type { SourceView } from "./source";
 import type { ChunkSet, Confirmation, ConfirmationOptions, ParseBlocks, ParsePages, ParseRun, Version } from "./types";
+import { DocumentQueue, type QueueDocument } from "./DocumentQueue";
 import { versionName } from "./types";
 import { ParseReview, readParsePages } from "./ParseReview";
 import { FeedbackInbox } from "../feedback";
@@ -15,15 +16,15 @@ import { useSession } from "../../session";
 import { createProjectionLease } from "../../projectionLease";
 
 type Item = { id: string; name: string };
-type Document = { id: string; title: string };
+type Document = QueueDocument;
 
-export function KnowledgeAdmin() { return <Workspace title="资料库与核验" eyebrow="KNOWLEDGE GOVERNANCE" intro="核对真实依据与原文批次，再查看发布条件和回执。" role="knowledge_manager"><KnowledgeHome /></Workspace>; }
+export function KnowledgeAdmin() { return <Workspace title="资料管理" eyebrow="" intro="收录资料、核对内容与适用范围，再发布给员工使用。" role="knowledge_manager"><KnowledgeHome /></Workspace>; }
 function KnowledgeHome() {
   const { profile } = useSession();
   const feedback = new URLSearchParams(location.search).has("feedback");
   if (!profile?.capabilities.includes("feedback.handle")) return <KnowledgeWorkspace />;
   return <div className="stack">
-    <nav aria-label="资料治理入口" className="tabs">
+    <nav aria-label="资料治理入口" className="knowledge-subnav">
       <a className="ghost" href="/workspace/manage" aria-current={feedback ? undefined : "page"}>资料维护</a>
       <a className="ghost" href="/workspace/manage?feedback=1" aria-current={feedback ? "page" : undefined}>资料反馈</a>
     </nav>
@@ -32,6 +33,8 @@ function KnowledgeHome() {
 }
 function KnowledgeWorkspace() {
   const op = useOperation();
+  const [documentOpen, setDocumentOpen] = useState(false);
+  const collectionRequested = new URLSearchParams(location.search).has("collect");
   const [kbs, setKbs] = useState<Item[]>([]), [kb, setKb] = useState("");
   const [docs, setDocs] = useState<Document[]>([]), [doc, setDoc] = useState("");
   const [versions, setVersions] = useState<Version[]>([]), [version, setVersion] = useState<Version | null>(null);
@@ -90,10 +93,11 @@ function KnowledgeWorkspace() {
     await selectVersion(documentId, response.items.find(row => row.id === (preferred || version?.id)) || response.items.find(row => row.publish_status === "effective") || response.items[0] || null);
   }
   async function loadDocuments(kbId: string, preferred = "", preferredVersion = "") {
+    setDocumentOpen(Boolean(preferred));
     setKb(kbId); setDocs([]); setDoc(""); setVersion(null); setVersions([]); setSource(null); setOptions(null); setRun(""); setRuns([]); clearRun(); setConfirmations([]);
     if (!kbId) return;
     const response = await api.get<{ items: Document[] }>(`/knowledge-bases/${id(kbId)}/documents`); setDocs(response.items);
-    await loadVersions(response.items.find(row => row.id === preferred)?.id || response.items[0]?.id || "", preferredVersion);
+    if (preferred) await loadVersions(response.items.find(row => row.id === preferred)?.id || "", preferredVersion);
   }
   async function refresh(preferred = run) {
     const [response, confirmResult, opts, sourceView, parsed] = await Promise.all([
@@ -113,6 +117,21 @@ function KnowledgeWorkspace() {
     await loadRun(parsed.items.find(row => row.id === preferred)?.id || parsed.items[0]?.id || "", selected.selected_chunk_set_id);
   }
   useEffect(() => { void op.perform(async () => { const response = await api.get<{ items: Item[] }>("/knowledge-bases"); setKbs(response.items); await loadDocuments(response.items[0]?.id || ""); }); }, []);
+  useEffect(() => {
+    if (!kb || documentOpen) return;
+    let active = true, running = false;
+    const lease = createProjectionLease(() => { if (active) setDocs([]); });
+    async function verify() {
+      if (running || document.hidden || !navigator.onLine) return;
+      running = true; const started = performance.now();
+      try { const result = await api.get<{items: Document[]}>(`/knowledge-bases/${id(kb)}/documents`); if (active && lease.renew(started)) setDocs(result.items); }
+      catch { if (active) { lease.invalidate(); op.say("资料列表暂不可核对，已隐藏内容。请刷新管理范围。"); } }
+      finally { running = false; }
+    }
+    void verify(); const timer = setInterval(() => void verify(), 10000);
+    window.addEventListener("focus", verify);
+    return () => { active = false; lease.dispose(); clearInterval(timer); window.removeEventListener("focus", verify); };
+  }, [kb, documentOpen]);
   useEffect(() => {
     if (confirmationJump) document.getElementById("knowledge-confirmation-kind")?.focus();
   }, [confirmationJump]);
@@ -135,8 +154,10 @@ function KnowledgeWorkspace() {
     window.addEventListener("focus", verify); document.addEventListener("visibilitychange", verify);
     return () => { active = false; lease.dispose(); clearInterval(timer); window.removeEventListener("focus", verify); document.removeEventListener("visibilitychange", verify); };
   }, [base]);
-  return <fieldset className="operation-fields" disabled={op.busy} aria-busy={op.busy}><div className="manage-grid"><aside className="panel knowledge-selection" id="collect"><div className="section-heading"><div><p className="eyebrow">WORK QUEUE</p><h2>选择要维护的资料</h2></div><button className="ghost" onClick={() => void op.perform(() => loadDocuments(kb, doc))}>刷新</button></div><KnowledgeBaseCreation perform={op.perform} /><DocumentCreation key={kb} kb={kb} perform={op.perform} onCreated={async (documentId, versionId) => { await loadDocuments(kb, documentId, versionId); op.say("新文档草稿已保存：" + documentId + " / " + versionId + "；分类和业务确认仍待核对。"); }} /><label className="space">知识库<select value={kb} onChange={event => void op.perform(() => loadDocuments(event.target.value))}>{kbs.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label className="space">文档<select value={doc} onChange={event => void op.perform(() => loadVersions(event.target.value))}>{docs.map(row => <option key={row.id} value={row.id}>{row.title}</option>)}</select></label><label className="space">版本<select value={version?.id || ""} onChange={event => void op.perform(() => selectVersion(doc, versions.find(row => row.id === event.target.value) || null))}>{versions.map(row => <option key={row.id} value={row.id}>{versionName(row)}</option>)}</select></label><p className="status muted">{version ? `${versionName(version)} · 原文参考 ${version.reference_access_state === "open" ? "已开放" : "未开放"}` : "当前没有可管理的资料版本。"}</p>{doc && <details><summary>上传此文档新版本 PDF</summary><p className="muted">上传保存为草稿；现行发布版与确认资格由服务端保留。只使用获准本地处理的文件。</p><form className="stack" onSubmit={event => { event.preventDefault(); const values = formValues(event), form = event.currentTarget; void op.perform(async () => { const file = values.get("file"); if (!(file instanceof File) || !file.size) throw Error("请选择新版本 PDF。"); const result = await api.uploadVersion<{ version: Version }>(doc, file, { revision_label: text(values, "revision_label") || null, model_scope: text(values, "model_scope") || null }); form.reset(); form.closest("details")?.removeAttribute("open"); await loadVersions(doc, result.version.id); op.say("新版本草稿已保存：" + result.version.id + "；请选择本地解析继续核验。"); }); }}><Field label="版本标识（可选）" name="revision_label" required={false} /><Field label="适用型号（逗号分隔，可选）" name="model_scope" required={false} /><label>新版本 PDF<input name="file" type="file" accept="application/pdf,.pdf" required /></label><button>上传新版本</button></form></details>}</aside>
-    <section className="panel detail">{version && <div className="version-states" aria-label="版本业务状态"><span>适用性 <strong>{version.applicability_status === "confirmed" ? "已确认" : "待确认"}</strong></span><span>内容核验 <strong>{version.content_review_status === "approved" ? "已核验" : "待核验"}</strong></span><span>发布状态 <strong>{version.publish_status === "effective" ? "当前发布版" : version.publish_status === "draft" ? "未发布" : "历史版本"}</strong></span></div>}<PendingOperations perform={op.perform} onRecovered={() => loadDocuments(kb, doc)} /><nav className="tabs" aria-label="资料维护步骤">{[["review", "原文核验"], ["confirm", "业务依据"], ["publication", "发布检查"], ["lifecycle", "生命周期"]].map(([key, label]) => <button key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key)}>{label}</button>)}</nav>{tab === "lifecycle" && kb && <LifecyclePanel key={kb} kb={kb} perform={op.perform} onChanged={async () => { if (version) await refresh(); }} onDeleted={async documentId => { if (doc === documentId) { setDoc(""); setVersion(null); setVersions([]); setRuns([]); setRun(""); clearRun(); setConfirmations([]); setOptions(null); setSource(null); } setDocs(current => current.filter(row => row.id !== documentId)); }} />}{version && <>
+  return <fieldset className="operation-fields" disabled={op.busy} aria-busy={op.busy}><div className={`manage-grid ${documentOpen ? "is-document" : "is-library"}`}>{documentOpen && <header className="document-context"><button className="text-button" onClick={() => void op.perform(() => loadDocuments(kb))}>← 返回资料总览</button><h1>{docs.find(row => row.id === doc)?.title || "资料详情"}</h1><p>{version ? versionName(version) : "正在读取版本…"}</p></header>}<details className="library-tools" open={collectionRequested}><summary>{documentOpen ? "更换资料 / 版本与上传" : "收录资料与管理范围"}</summary><aside className="panel knowledge-selection" id="collect"><div className="section-heading"><div><h2>选择要维护的资料</h2></div><button className="ghost" onClick={() => void op.perform(() => loadDocuments(kb, doc))}>刷新</button></div><KnowledgeBaseCreation perform={op.perform} /><DocumentCreation key={kb} kb={kb} perform={op.perform} onCreated={async (documentId, versionId) => { await loadDocuments(kb, documentId, versionId); op.say("新文档草稿已保存：" + documentId + " / " + versionId + "；分类和业务确认仍待核对。"); }} /><label className="space">知识库<select value={kb} onChange={event => void op.perform(() => loadDocuments(event.target.value))}>{kbs.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label className="space">文档<select value={doc} onChange={event => { setDocumentOpen(true); void op.perform(() => loadVersions(event.target.value)); }}>{docs.map(row => <option key={row.id} value={row.id}>{row.title}</option>)}</select></label><label className="space">版本<select value={version?.id || ""} onChange={event => void op.perform(() => selectVersion(doc, versions.find(row => row.id === event.target.value) || null))}>{versions.map(row => <option key={row.id} value={row.id}>{versionName(row)}</option>)}</select></label><p className="status muted">{version ? `${versionName(version)} · 原文参考 ${version.reference_access_state === "open" ? "已开放" : "未开放"}` : "当前没有可管理的资料版本。"}</p>{doc && <details><summary>上传此文档新版本 PDF</summary><p className="muted">上传保存为草稿；现行发布版与确认资格由服务端保留。只使用获准本地处理的文件。</p><form className="stack" onSubmit={event => { event.preventDefault(); const values = formValues(event), form = event.currentTarget; void op.perform(async () => { const file = values.get("file"); if (!(file instanceof File) || !file.size) throw Error("请选择新版本 PDF。"); const result = await api.uploadVersion<{ version: Version }>(doc, file, { revision_label: text(values, "revision_label") || null, model_scope: text(values, "model_scope") || null }); form.reset(); form.closest("details")?.removeAttribute("open"); await loadVersions(doc, result.version.id); op.say("新版本草稿已保存：" + result.version.id + "；请选择本地解析继续核验。"); }); }}><Field label="版本标识（可选）" name="revision_label" required={false} /><Field label="适用型号（逗号分隔，可选）" name="model_scope" required={false} /><label>新版本 PDF<input name="file" type="file" accept="application/pdf,.pdf" required /></label><button>上传新版本</button></form></details>}</aside></details>
+    <PendingOperations perform={op.perform} onRecovered={() => loadDocuments(kb, doc)} />
+    {!documentOpen && <DocumentQueue documents={docs} library={kbs.find(row => row.id === kb)?.name || ""} busy={op.busy} onOpen={documentId => { setDocumentOpen(true); setTab("review"); void op.perform(() => loadVersions(documentId)); }}/>}
+    {documentOpen && <section className="panel detail">{version && <div className="version-states" aria-label="版本业务状态"><span>适用性 <strong className={version.applicability_status === "confirmed" ? "confirmed" : ""}>{version.applicability_status === "confirmed" ? "已确认" : "待确认"}</strong></span><span>内容核验 <strong className={version.content_review_status === "approved" ? "confirmed" : ""}>{version.content_review_status === "approved" ? "已核验" : "待核验"}</strong></span><span>发布状态 <strong className={version.publish_status === "effective" ? "confirmed" : ""}>{version.publish_status === "effective" ? "当前发布版" : version.publish_status === "draft" ? "未发布" : "历史版本"}</strong></span></div>}<nav className="tabs" aria-label="资料维护步骤">{[["review", "原文核验"], ["confirm", "业务依据"], ["publication", "发布检查"], ["lifecycle", "生命周期"]].map(([key, label]) => <button key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key)}>{label}</button>)}</nav>{tab === "lifecycle" && kb && <LifecyclePanel key={kb} kb={kb} perform={op.perform} onChanged={async () => { if (version) await refresh(); }} onDeleted={async documentId => { if (doc === documentId) { setDoc(""); setVersion(null); setVersions([]); setRuns([]); setRun(""); clearRun(); setConfirmations([]); setOptions(null); setSource(null); } setDocs(current => current.filter(row => row.id !== documentId)); }} />}{version && <>
       <div hidden={tab !== "review"}>
         <ParseReview key={`${version.id}-${run}`} base={base} version={version} runs={runs} run={run} current={currentRun}
           blocks={blocks} pages={pages} sets={sets} chunk={chunk} confirmations={confirmations} perform={op.perform}
@@ -146,5 +167,5 @@ function KnowledgeWorkspace() {
       <section hidden={tab !== "confirm"}>{source && <SourceForm key={`${version.id}-${source.etag}`} source={source} base={base} draft={version.publish_status === "draft"} perform={op.perform} onChange={refresh} />}{options && <ConfirmationForm key={`${version.id}-${version.revision}-${run}-${confirmationJump}`} options={options} base={base} run={run} blocks={blocks} preferKeyContent={confirmationJump > 0} onChange={refresh} perform={op.perform} />}<EvidenceUpload base={base} perform={op.perform} onChange={refresh} /><h3>确认记录与核查</h3><div className="records">{confirmations.map(row => <ConfirmationRecord key={`${row.id}-${row.etag}`} row={row} base={base} perform={op.perform} onChange={refresh}
         currentOptions={options} superseded={supersededConfirmations.has(row.id)} />)}{!confirmations.length && <p className="muted">本版本尚无业务确认登记。</p>}</div></section>
       <section hidden={tab !== "publication"}><Publication key={version.id} invalidation={publicationEpoch} visible={tab === "publication"} base={base} kb={kb} version={version} onChange={refresh} perform={op.perform} /></section>
-    </>}<Status message={op.message} bad={op.bad} /></section></div></fieldset>;
+    </>}</section>}<Status message={op.message} bad={op.bad} /></div></fieldset>;
 }

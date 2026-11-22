@@ -137,7 +137,7 @@ def local_stack(fixture_db):
         time.sleep(0.01)
     assert server.started
     address = f"http://127.0.0.1:{listener.getsockname()[1]}/"
-    with httpx.Client(base_url=address, timeout=10) as client:
+    with httpx.Client(base_url=address, timeout=10, trust_env=False) as client:
         login = client.post("/auth/login", json={"username": employee.username, "password": "synthetic employee password"})
         assert login.status_code == 200, login.text
         client.headers["X-CSRF-Token"] = login.json()["csrf_token"]

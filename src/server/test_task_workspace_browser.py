@@ -81,7 +81,7 @@ def test_task_workbench_query_share_revoke_sources_and_recovery(child_answer_pip
                 route.abort("failed")
             page.route("**/knowledge/queries", lose_reply, times=1)
             page.get_by_label("问题", exact=True).fill(QUERY)
-            page.get_by_role("button", name="提交工作", exact=False).click()
+            page.get_by_role("button", name="查询资料", exact=False).click()
             page.get_by_text("原操作结果待核对", exact=True).wait_for()
             with f.app.state.session_factory() as db:
                 task = db.scalar(select(QueryTask).where(QueryTask.owner_user_id == employee_id))
@@ -155,7 +155,7 @@ def test_task_workbench_query_share_revoke_sources_and_recovery(child_answer_pip
             # A same-conversation follow-up freezes current conditions and creates
             # a later execution without overwriting the original answer/share.
             page.get_by_label("问题", exact=True).fill(QUERY)
-            page.get_by_role("button", name="提交工作", exact=False).click()
+            page.get_by_role("button", name="继续查询", exact=True).click()
             expect(page.locator(".badge")).to_have_text("排队中")
             with f.app.state.session_factory() as db:
                 tasks = db.scalars(select(QueryTask).where(QueryTask.owner_user_id == employee_id).order_by(QueryTask.created_at)).all()
@@ -201,7 +201,7 @@ def test_task_workbench_query_share_revoke_sources_and_recovery(child_answer_pip
                     page.goto(f.gateway + "/workspace/query?new=1")
                     page.get_by_label("问题",exact=True).fill(QUERY)
                     page.get_by_label("设备型号（可选）",exact=True).fill(MODEL)
-                    page.get_by_role("button",name="提交工作",exact=False).click()
+                    page.get_by_role("button",name="查询资料",exact=False).click()
                     expect(page.locator(".badge")).to_have_text("排队中")
                     with f.app.state.session_factory() as db:
                         return db.scalar(select(QueryTask.id).where(QueryTask.owner_user_id==employee_id).order_by(QueryTask.created_at.desc()).limit(1))

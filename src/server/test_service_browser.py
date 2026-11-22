@@ -111,6 +111,19 @@ def test_react_services_protocol_tests_previews_activation_recovery_and_safe_sto
             expect(selections.get_by_text(selected["test_run_id"], exact=True)).to_be_visible()
             assert selected["input_admission"] == "exact_private_synthetic_attestation_required"
             assert selected["enterprise_admission_state"] == "not_configured"
+            # A real selected, current self-test is shown as admission, not live health.
+            request_count = len(provider.requests)
+            with page.expect_popup() as opened:
+                page.evaluate("window.open('/workspace/operations', '_blank')")
+            dashboard = opened.value
+            try:
+                tile = dashboard.locator(".admission-tile").filter(has=dashboard.get_by_role("heading", name="查询答复" if kind == "generation" else "文档解析", exact=True))
+                expect(tile.get_by_text("准入有效", exact=True)).to_be_visible()
+                expect(tile).to_contain_text(label)
+                assert len(provider.requests) == request_count, "Dashboard must not dispatch provider calls"
+                dashboard.screenshot(path=str(f.out / ("operations-" + kind + "-admitted.png")))
+            finally:
+                dashboard.close()
             if kind == "parsing":
                 # Revocation of the purpose must work even while the provider binding is unavailable.
                 monkeypatch.delenv("DATACENTER_SYNTHETIC_BROWSER_KEY")
@@ -136,3 +149,9 @@ def test_react_services_protocol_tests_previews_activation_recovery_and_safe_sto
     assert len([x for x in provider.requests if x.method == "POST" and x.target == BATCH_PATH]) == 1
     assert len([x for x in provider.requests if x.method == "PUT" and x.target.startswith(UPLOAD_PATH)]) == 1
     _screenshot(f, "service-safe-stop")
+
+    page.goto(f.address + "workspace/operations")
+    expect(page.locator(".admission-tile")).to_have_count(3)
+    expect(page.locator(".admission-tile").get_by_text("准入有效", exact=True)).to_have_count(0)
+    expect(page.get_by_text("当前仅获准合成试点。", exact=False)).to_be_visible()
+    f.checks.append("Actual current purpose admission appears in dashboard; disabled purposes never appear admitted; reads dispatch no provider call")

@@ -282,6 +282,8 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
     assert TOKENIZER.is_file(), "Installed local BGE-M3 tokenizer required for this browser run"
     original, standard_output = _synthetic_manager_manual()
     _login(f, "manage", manager, "manager password")
+    page.get_by_role("button", name="打开资料", exact=True).first.click()
+    page.locator(".library-tools > summary").click()
     _select(page, "文档").select_option(doc.id)
     page.get_by_text("上传此文档新版本 PDF", exact=True).click()
     page.get_by_label("版本标识（可选）", exact=True).fill("SYNTHETIC-REACT-REVISION")

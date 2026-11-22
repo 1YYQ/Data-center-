@@ -61,7 +61,7 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                 page.get_by_label("问题", exact=True).fill(question)
                 page.get_by_label("设备型号（可选）", exact=True).fill(model)
                 with page.expect_response(lambda reply: reply.url.endswith("/knowledge/queries") and reply.request.method == "POST") as accepted:
-                    page.get_by_role("button", name="提交工作", exact=False).click()
+                    page.get_by_role("button", name="查询资料", exact=False).click()
                 assert accepted.value.status == 202
                 return accepted.value.json()["task_id"]
 
