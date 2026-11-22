@@ -4,7 +4,7 @@
 
 IMPLEMENTED / VERIFIED_LOCAL_SYNTHETIC，用户体验验收EXTERNAL_PENDING。依据用户对价值表达、角色相同及demo感的反馈，员工首页改为具体资料问答/近期答复，KM改为资料总览/筛选→精确版本→原PDF对照，SA改为实际逐用途准入/脱敏任务→管理入口。未增加无后端的办公功能按钮或放宽门禁。
 
-本轮证据根为`outputs/ui-workspace/2026-11-22/rework/`，实际构建为`index-DJRzL-r0.js`及`index-BFrt7vzx.css`；最终Git/证据绑定见该目录`candidate-final.json`。
+本轮证据根为`outputs/ui-workspace/2026-11-22/rework/`，完整流程验证构建为`index-DJRzL-r0.js`，最终仅补清固定示例的试点范围文案，构建为`index-Bhlu77kU.js`及`index-BFrt7vzx.css`，其可见说明/示例只填入不提交由`copy-check.json`和`employee-pilot-scope-final.png`实际复核；业务机制与样式未变；最终Git/证据绑定见该目录`candidate-final.json`。
 
 - `browser-recheck.xml`的5项完整Chrome场景全部通过：员工缺型号/正式六证据/连续追问/原文与草稿返回/分享撤回/底层撤权/已知503原任务恢复及截断200未知围栏；KM上传、持久Standard原包→IR/QC、原文核验、模拟专业依据/签认核查、候选/索引激活与发布撤回；SA审批登记核查/撤销/角色拒绝；三类服务合成协议、自检/预检/启停、未知选用GET恢复；独立容量页面分页/429/刷新/原任务取消。具体状态/字节与账本断言见`task-workbench-browser/report.json`、`workspace-browser/three-role-rework/*/observations.json`及`capacity/observations.json`。
 - 新SA总览额外检查：实际选用的生成/解析用途显示准入有效，停用后不显示有效，读取总览无供应商请求。不把配置准入当作实时健康或企业批准。
