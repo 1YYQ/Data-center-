@@ -15,6 +15,35 @@ from .db import build_engine, init_db
 from . import migration_safety as safety
 
 
+def test_retained_dialect_does_not_retain_disposed_engine(tmp_path):
+    import gc
+    import weakref
+
+    engine = build_engine("sqlite:///" + (tmp_path / "lifecycle.sqlite").as_posix())
+    # ORM mapper compilation caches can outlive the Engine and retain a dialect.
+    dialect = engine.dialect
+    reference = weakref.ref(engine)
+    engine.dispose()
+    del engine
+    gc.collect()
+    assert reference() is None
+    assert dialect.dispatch.do_connect
+
+
+def test_connection_guard_reads_current_protection_after_engine_creation(tmp_path, monkeypatch):
+    target = tmp_path / "late-protected.sqlite"
+    target.write_bytes(b"SYNTHETIC late quarantine")
+    engine = build_engine("sqlite:///" + target.as_posix())
+    monkeypatch.setattr(safety, "PROTECTED_DATABASE", target)
+    try:
+        with pytest.raises(safety.MigrationRefused, match="quarantined"):
+            with engine.connect():
+                pass
+        assert target.read_bytes() == b"SYNTHETIC late quarantine"
+    finally:
+        engine.dispose()
+
+
 def test_accident_command_is_refused_without_opening_default_database():
     path = safety.PROTECTED_DATABASE
     before = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None

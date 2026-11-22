@@ -444,9 +444,25 @@ def run_recovery_scenarios(f, output_path):
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     report = {"scope": "Installed Pi SDK, real loopback HTTP fault injection, isolated PostgreSQL",
-              "database": database, "generation_id": f.generation_id, "scenarios": {}, "passed": False}
+              "database": database, "generation_id": f.generation_id, "scenarios": {}, "passed": False,
+              "harness_sha256": sha256(Path(__file__).read_bytes()).hexdigest()}
     started, gateway_offset, error_offset = time.monotonic(), len(f.gateway_trace), len(f.model.errors)
     try:
+        # The sustained workload has ended before this hook. Observe deferred
+        # garbage separately, without clearing the model or changing any wave.
+        import psutil
+
+        process = psutil.Process()
+
+        def memory_state():
+            info = process.memory_info()
+            return {"private_commit_bytes": getattr(info, "private", None), "rss_bytes": info.rss,
+                    "model_cache_entries": local_bge._load.cache_info().currsize,
+                    "gc_stats": gc.get_stats()}
+
+        diagnostic = report["post_sustain_gc"] = {"before": memory_state()}
+        diagnostic["collected"] = gc.collect()
+        diagnostic["after"] = memory_state()
         with _recovery_proxy(f.model.port) as proxy:
             report["loopback_requests"] = proxy.requests
             profile_id = "synthetic-endurance-recovery-" + uuid4().hex

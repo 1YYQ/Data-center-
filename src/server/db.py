@@ -35,11 +35,15 @@ def build_engine(database_url: str):
             finally:
                 cursor.close()
                 connection.rollback()
+    # A dialect can survive in ORM compilation caches after Engine disposal.
+    # Keep only the immutable target here; capturing Engine retains its caches.
+    connection_url = engine.url.render_as_string(hide_password=False)
+
     @event.listens_for(engine, "do_connect")
     def validate_before_dbapi_connect(dialect, record, args, kwargs):
         from .migration_safety import target_identity
         # Also protects a server incorrectly launched with lifespan disabled.
-        target_identity(engine.url.render_as_string(hide_password=False))
+        target_identity(connection_url)
     return engine
 
 

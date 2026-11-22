@@ -18,6 +18,7 @@ from threading import Event, Lock, Thread
 import time
 from types import SimpleNamespace
 from uuid import uuid4
+from weakref import WeakSet
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import httpx
@@ -618,6 +619,19 @@ def test_real_bge_query_endurance(isolated_endurance_pipeline, monkeypatch):
     import psutil
 
     f = isolated_endurance_pipeline
+    from . import worker as query_worker
+
+    worker_engines = WeakSet()
+    original_build_engine = query_worker.build_engine
+    worker_engine_counts = {"created": 0}
+
+    def observed_build_engine(*args, **kwargs):
+        engine = original_build_engine(*args, **kwargs)
+        worker_engines.add(engine)
+        worker_engine_counts["created"] += 1
+        return engine
+
+    monkeypatch.setattr(query_worker, "build_engine", observed_build_engine)
     proof_only = os.environ.get("DATACENTER_ENDURANCE_PROOF_ONLY") == "1"
     recovery_enabled = os.environ.get("DATACENTER_ENDURANCE_RECOVERY") == "1"
     stages = tuple(int(value) for value in os.environ.get("DATACENTER_ENDURANCE_STAGES", "10" if proof_only else "2,10").split(","))
@@ -779,10 +793,12 @@ def test_real_bge_query_endurance(isolated_endurance_pipeline, monkeypatch):
                     phase.update(phase="query", wave=wave)
                     check_resources()
                     timing = _wave(f, journal, stage, wave, proofs, ranked_counts)
+                    timing["worker_engine_lifecycle"] = {**worker_engine_counts, "live": len(worker_engines)}
                     progress["waves"].append(timing)
                     progress["successful_worker_seconds"] += timing["successful_worker_seconds"]
                     journal.append("wave_verified", stage=stage, wave=wave, successful_worker_seconds=progress["successful_worker_seconds"],
-                                   wall_seconds=timing["wall_seconds"], verified_queries=wave * QUEUE_LIMIT)
+                                   wall_seconds=timing["wall_seconds"], verified_queries=wave * QUEUE_LIMIT,
+                                   worker_engine_lifecycle=timing["worker_engine_lifecycle"])
                     journal.checkpoint(report)
                 if recovery_enabled and stage == sustain_stage:
                     from .test_query_endurance_recovery import run_recovery_scenarios
@@ -975,6 +991,75 @@ def _boundary_reject_query(f, journal, client):
     assert len(f.model.errors) == errors_before and all(row["state"] == "received" for row in ledger["calls"])
     assert ledger["reserved_calls"] == len(ledger["calls"]) == observed["loopback_requests"]
     return observed
+
+
+@pytest.mark.skipif(not SCALE_BOUNDARY, reason="Explicit 89-document scale-boundary opt-in required")
+def test_scale_unready_http_fences(isolated_endurance_pipeline):
+    """Observe refusal at the full published scale without loading another model.
+
+    This separate negative test uses the fixture's synthetic embedding service.
+    It does not replace the real-BGE manifest measurement or certify throughput.
+    """
+    import psutil
+
+    from .test_embedding_service_use import _login
+
+    f = isolated_endurance_pipeline
+    inventory = Path(os.environ.get("DATACENTER_ENDURANCE_PAGE_INVENTORY", "outputs/sample-inspection/2026-11-15/inventory.json"))
+    plan, redistribution = _manual_plan((89,), 8, inventory)
+    assert len(plan) == 89 and sum(row[0] for row in plan) == 6372
+    f.blocks_per_page = 4
+    output = Path(os.environ["DATACENTER_ENDURANCE_OUTPUT"])
+    journal = Journal(output / f"unready-{uuid4().hex[:12]}")
+    print(f"Synthetic 89-document HTTP refusal evidence: {journal.directory.resolve()}", flush=True)
+    report = {"mode": "published_scale_unready_http_fences", "real_bge": False,
+              "closure_verified": False, "passed": False, "database": f.app.state.engine.url.database,
+              "harness_sha256": sha256(Path(__file__).read_bytes()).hexdigest(),
+              "page_redistribution": redistribution, "published_documents": 1, "published_pages": 2}
+    phase = {"phase": "publish", "stage": 89}
+    f.config = replace(f.config, query_max_inflight=QUEUE_LIMIT)
+    f.app.state.settings = f.config
+    f.app.state.session_factory.configure(info={"settings": f.config})
+    journal.checkpoint(report)
+    try:
+        with _monitor(f, journal, phase, 5):
+            for ordinal, item in enumerate(plan[1:], 2):
+                if psutil.virtual_memory().available < 512 * 1024 ** 2:
+                    raise EnduranceLimit("Available memory fell below the configured threshold")
+                if shutil.disk_usage(journal.directory).free < 1024 ** 3:
+                    raise EnduranceLimit("Evidence volume has less than 1 GiB available")
+                started = time.monotonic()
+                source = _publish_manual(f, ordinal, item, full_domain_review=False)
+                report["published_documents"] += 1
+                report["published_pages"] += source["pages"]
+                journal.append("manual_published", ordinal=ordinal, seconds=time.monotonic() - started,
+                               **{key: value for key, value in source.items() if key != "quotes"})
+                journal.checkpoint(report)
+            phase.update(phase="manifest_freeze")
+            with f.app.state.session_factory() as db:
+                candidate = _build(db, f)
+                generation_id = candidate.id
+                manifest = candidate.build_report["manifest"]
+                assert candidate.status == "building" and not candidate.ready_at
+                assert len(manifest["sources"]) == 89 and len(manifest["members"]) == 6370
+                actual = indexing.child_vector_integrity(db, candidate, manifest)
+                assert actual["status"] == "incomplete" and actual["actual_count"] == 0
+                assert not actual["unexpected_child_refs"] and not actual["invalid_child_refs"]
+                report["candidate"] = {"id": generation_id, "status": candidate.status,
+                    "expected_vectors": len(manifest["members"]), "actual_vectors": 0}
+                manager = db.get(User, f.actor_id).username
+                db.commit()
+            journal.checkpoint(report)
+            phase.update(phase="activation_and_query")
+            _login(f.client, manager)
+            with httpx.Client(**{**_http_args(f, f.client), "timeout": 120}) as client:
+                report["index_http_fence"] = _boundary_index_status(client, f, generation_id, "capacity_not_met")
+                journal.checkpoint(report)
+                report["ordinary_http_query"] = _boundary_reject_query(f, journal, client)
+            report["passed"] = True
+    finally:
+        report["elapsed_seconds"] = time.monotonic() - journal.started
+        journal.checkpoint(report)
 
 
 @pytest.mark.skipif(not SCALE_BOUNDARY, reason="Explicit 89-document scale-boundary opt-in required")
