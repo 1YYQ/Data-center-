@@ -897,7 +897,15 @@ def run_one(config: Settings, *, gateway_url: str, profile_id="local-pi", profil
                         outbox.status, outbox.published_at, outbox.publish_attempts = "published", utc_now(), outbox.publish_attempts + 1
                     db.commit()
                     return {"task_id": task.id, "state": "waiting_input"}
+                task_write_guard(db, task)
+                task.next_action = "正在核对本地执行环境，首次处理可能较慢；无需重复提交。"
+                task.revision += 1
+                audit(db, actor.id, "runtime.preflight_started", "task", task.id)
+                db.commit()
+                preflight_started = time.monotonic()
                 artifacts = runtime_artifacts()
+                audit(db, actor.id, "runtime.preflight_verified", "task", task.id,
+                      duration_ms=round((time.monotonic() - preflight_started) * 1000))
                 profile = db.get(RuntimeProfile, (profile_id, profile_revision))
                 if (not profile or profile.artifact_manifest_hash != artifacts["artifact_manifest_hash"]
                         or profile.adapter_fingerprint != artifacts["adapter_fingerprint"]
@@ -906,6 +914,7 @@ def run_one(config: Settings, *, gateway_url: str, profile_id="local-pi", profil
                 run, token = open_run(db, task.id, profile_id=profile_id, profile_revision=profile_revision)
                 task_write_guard(db, task)
                 task.status = "running"
+                task.next_action = "正在按当前授权资料处理查询，请等待。"
                 task.revision += 1
                 outbox = db.scalar(select(TaskOutbox).where(TaskOutbox.step_id == run.step_id).order_by(TaskOutbox.dispatch_no.desc()))
                 if outbox:

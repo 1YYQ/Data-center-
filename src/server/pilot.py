@@ -808,6 +808,7 @@ def _readiness(config_path: Path | str, app) -> list[str]:
     from .runtime_models import RuntimeProfile
     from .service_models import ServiceRevision, ServiceTestRun
     from .service_use_models import ServiceSelection
+    from .service_admission import binding as service_binding, ProviderError
     from .governance import publication_is_current
     issues = []
     with Session(app.state.engine) as db:
@@ -826,13 +827,19 @@ def _readiness(config_path: Path | str, app) -> list[str]:
             issues.append("runtime_profile:missing")
         active_embedding_revision = None
         active_answer_revision = None
+        active_answer_binding = None
         for purpose, expected_ref in (("query.answer", "bailian-beijing-qwen38-flash"),
                                       ("document.embed", "local-bge-m3")):
             selected = db.get(ServiceSelection, purpose)
             revision = db.get(ServiceRevision, selected.revision_id) if selected and selected.revision_id else None
             test = db.get(ServiceTestRun, selected.test_run_id) if selected and selected.test_run_id else None
+            try:
+                current_binding = service_binding(revision, app.state.service_endpoints) if revision else None
+            except ProviderError:
+                current_binding = None
             if (not selected or not selected.enabled or not revision or revision.endpoint_ref != expected_ref
                     or not test or test.revision_id != revision.id or test.binding_hash != selected.binding_hash
+                    or test.binding_hash != current_binding
                     or test.state != "succeeded" or not test.valid_until or test.valid_until <= utc_now()):
                 issues.append(purpose + ":not_selected")
             elif purpose == "document.embed":
@@ -843,8 +850,11 @@ def _readiness(config_path: Path | str, app) -> list[str]:
                 if revision.model != "qwen3.8-flash" or revision.adapter != "openai-chat-v1":
                     issues.append("query.answer:revision_mismatch")
                 active_answer_revision = revision.id
+                active_answer_binding = selected.binding_hash
         if runtime_profile and runtime_profile.configuration.get("generation_revision_id") != active_answer_revision:
             issues.append("runtime_profile:generation_revision_mismatch")
+        if runtime_profile and runtime_profile.configuration.get("generation_binding_hash") != active_answer_binding:
+            issues.append("runtime_profile:generation_binding_mismatch")
         generation = db.get(IndexGeneration, kb.active_generation_id) if kb and kb.active_generation_id else None
         if (not generation or generation.knowledge_base_id != kb.id or generation.status != "ready"
                 or generation.embedding_profile_id != active_embedding_revision):

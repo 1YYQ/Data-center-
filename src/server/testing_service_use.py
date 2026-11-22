@@ -13,6 +13,41 @@ from .service_admission import digest
 from .service_use_models import SyntheticServiceInput
 
 
+def _fixture_inputs_match(task, approved_inputs, approved_effective):
+    """Permit only transport metadata and a server-resolved fixed model to vary.
+
+    Conversation IDs/revisions are not business content. They must still be
+    canonical and point to this accepted task's conversation. Every other field
+    retains the exact fixed-fixture comparison, including unexpected keys.
+    """
+    from uuid import UUID
+    original, effective = dict(task.input_snapshot), dict(task.effective_input)
+    conversation = original.get("conversation_id")
+    revision = original.get("context_revision")
+    if any(original.get(key) != effective.get(key) for key in ("conversation_id", "context_revision")):
+        return False
+    if conversation is None:
+        if revision is not None:
+            return False
+    else:
+        try:
+            if str(UUID(conversation)) != conversation or conversation != task.conversation_id:
+                return False
+        except (ValueError, TypeError, AttributeError):
+            return False
+        if type(revision) is not int or revision < 0:
+            return False
+    for payload in (original, effective):
+        payload["conversation_id"], payload["context_revision"] = None, None
+    if effective not in approved_effective:
+        return False
+    # Only the model resolved and validated on the accepted task is inherited;
+    # no supplied unknown model or question is silently rewritten.
+    if original.get("model") is None:
+        original["model"] = effective["model"]
+    return original in approved_inputs
+
+
 def attest_synthetic_input(db, actor_id, purpose, resource_key, payload):
     if type(payload) is not bytes or not resource_key:
         raise ValueError("Exact synthetic bytes and a resource identity are required")
@@ -36,6 +71,7 @@ def install_synthetic_answer_fixture(app, *, actor_id, knowledge_base_id, versio
     from sqlalchemy.engine import make_url
     from .governance import publication_is_current
     from .models import ChunkSet, Document, DocumentVersion, FileObject, ParseRun
+    from .execution_models import Conversation, ConversationMessage
     from .parsing.derivation import _verify_original
     from .parsing.local_pipeline import ParseContractError
     from .runtime_api import _credential
@@ -63,11 +99,18 @@ def install_synthetic_answer_fixture(app, *, actor_id, knowledge_base_id, versio
     def issue(run_id, token):
         with app.state.session_factory() as db:
             run, task, actor, profile = _validate_run(db, run_id, token)
-            if (actor.id != actor_id or task.effective_input not in approved_effective
-                    or task.input_snapshot not in approved_inputs
+            if (actor.id != actor_id or not _fixture_inputs_match(task, approved_inputs, approved_effective)
                     or task.input_snapshot.get("mode") != task.effective_input.get("mode")
                     or task.accepted_scope.get("knowledge_base_ids") != [knowledge_base_id]
                     or profile.configuration["generation"].get("wire_protocol") != BAILIAN_WIRE):
+                return
+            conversation = db.get(Conversation, task.conversation_id)
+            message = db.get(ConversationMessage, task.source_message_id)
+            if (not conversation or conversation.owner_user_id != actor_id or conversation.status != "active"
+                    or not message or message.conversation_id != conversation.id or message.author_user_id != actor_id
+                    or message.role != "user" or message.purpose != "query" or message.content != query
+                    or (task.input_snapshot.get("context_revision") is not None
+                        and task.input_snapshot["context_revision"] > conversation.revision)):
                 return
             service = _task_service(db, task, "answer", profile)
             if service is None or service[-1].get("wire_protocol") != BAILIAN_WIRE:

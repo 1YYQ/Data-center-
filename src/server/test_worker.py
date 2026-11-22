@@ -251,6 +251,7 @@ def test_worker_http_cancel_after_selection_prevents_run_admission_and_node_star
 
     def inspect_artifacts_then_cancel():
         current = f.client.get(f"/tasks/{task.id}")
+        assert current.json()["next_action"] == "正在核对本地执行环境，首次处理可能较慢；无需重复提交。"
         response = f.client.post(f"/tasks/{task.id}/cancel", json={"reason": "SYNTHETIC cancellation after worker selection"},
                                  headers=_headers(current.json()["revision"]))
         assert response.status_code == 200 and response.json()["status"] == "cancelled", response.text
