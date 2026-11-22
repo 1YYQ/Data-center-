@@ -306,3 +306,71 @@ def test_installed_tree_hashes_changed_bytes_of_same_length(tmp_path):
     os.utime(module, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
     assert module.stat().st_size == original_stat.st_size
     assert _installed_tree(tmp_path) != original
+
+
+def test_native_tree_reader_matches_full_byte_manifest(tmp_path):
+    from .worker import _installed_tree, canonical
+    # More files than reader slots, including empty and multi-buffer files.
+    contents = {"empty.js": b"", "nested/a.js": b"a" * 600000,
+                "nested/b.js": b"\x00\xff", "c.js": b"c", "d.js": b"d"}
+    for name, body in contents.items():
+        path = tmp_path / name
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(body)
+    expected = {name: hashlib.sha256(body).hexdigest() for name, body in contents.items()}
+    assert _installed_tree(tmp_path) == hashlib.sha256(canonical(expected).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("change", ["added", "removed", "changed", "incomplete", "failed"])
+def test_native_tree_reader_refuses_changed_or_partial_inventory(tmp_path, monkeypatch, change):
+    from . import worker
+    from .services import SafeError
+    import subprocess
+    module = tmp_path / "index.js"
+    module.write_bytes(b"original")
+    run = worker.subprocess.run
+
+    def changed_run(*args, **kwargs):
+        if change == "changed":
+            module.write_bytes(b"changed-before-open")
+        if change == "failed":
+            raise subprocess.CalledProcessError(1, args[0])
+        result = run(*args, **kwargs)
+        if change == "added":
+            (tmp_path / "extra.js").write_bytes(b"extra")
+        elif change == "removed":
+            module.unlink()
+        elif change == "incomplete":
+            result.stdout = b"{}"
+        return result
+
+    monkeypatch.setattr(worker.subprocess, "run", changed_run)
+    with pytest.raises(SafeError) as error:
+        worker._installed_tree(tmp_path)
+    assert error.value.code == "RUNTIME_ARTIFACT_CHANGED"
+
+
+def test_native_tree_reader_refuses_directory_junction(tmp_path):
+    import os
+    import subprocess
+    from .worker import _installed_tree
+    from .services import SafeError
+    source, outside = tmp_path / "sdk", tmp_path / "outside"
+    source.mkdir()
+    outside.mkdir()
+    (outside / "index.js").write_bytes(b"outside locked tree")
+    link = source / "redirect"
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+                       check=True, capture_output=True)
+    else:
+        link.symlink_to(outside, target_is_directory=True)
+    try:
+        with pytest.raises(SafeError) as error:
+            _installed_tree(source)
+        assert error.value.code == "RUNTIME_ARTIFACT_CHANGED"
+    finally:
+        if os.name == "nt":
+            os.rmdir(link)
+        else:
+            link.unlink()

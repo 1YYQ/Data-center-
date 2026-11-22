@@ -52,11 +52,19 @@ def _file_hash(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def _installed_tree(root):
-    files = {}
+def _installed_tree_snapshot(root):
+    """Inventory every loadable file, refusing Windows reparse points as well as links."""
+    files, identities = {}, {}
     directories = [root]
     while directories:
         directory = directories.pop()
+        directory_info = directory.lstat()
+        if (not stat.S_ISDIR(directory_info.st_mode)
+                or getattr(directory_info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+            raise SafeError("RUNTIME_ARTIFACT_CHANGED", "运行依赖必须位于锁定目录", 409)
+        identities[directory.relative_to(root).as_posix()] = (
+            directory_info.st_dev, directory_info.st_ino, directory_info.st_mode,
+            directory_info.st_mtime_ns, getattr(directory_info, "st_file_attributes", 0))
         with os.scandir(directory) as entries:
             for entry in entries:
                 # npm's CLI shims are not part of the launched Node module tree.
@@ -70,10 +78,96 @@ def _installed_tree(root):
                 if stat.S_ISDIR(details.st_mode):
                     directories.append(path)
                 elif stat.S_ISREG(details.st_mode):
-                    files[path.relative_to(root).as_posix()] = _file_hash(path)
+                    files[path.relative_to(root).as_posix()] = (
+                        details.st_size, details.st_mtime_ns, details.st_mode,
+                        getattr(details, "st_file_attributes", 0))
                 else:
                     raise SafeError("RUNTIME_ARTIFACT_CHANGED", "运行依赖文件无法核对", 409)
-    return hashlib.sha256(canonical(files).encode()).hexdigest()
+    return files, identities
+
+
+# Fixed local program, not model/document code. Four short-lived native readers
+# avoid serial Python small-file I/O. Every invocation still hashes every byte;
+# no saved manifest, mtime cache, or successful prior check substitutes for reads.
+_TREE_HASH_PROGRAM = r"""
+const fs = require('node:fs');
+const {Worker} = require('node:worker_threads');
+const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+const program = `
+const fs = require('node:fs');
+const crypto = require('node:crypto');
+const {workerData, parentPort} = require('node:worker_threads');
+const result = Object.create(null);
+const buffer = Buffer.allocUnsafe(262144);
+function identity(s) {
+  return [s.dev, s.ino, s.mode, s.nlink, s.size, s.mtimeNs, s.ctimeNs].map(String).join(':');
+}
+for (const item of workerData) {
+  const before = fs.lstatSync(item.path, {bigint: true});
+  if (!before.isFile() || before.isSymbolicLink() ||
+      String(before.size) !== item.size || String(before.mtimeNs) !== item.mtime)
+    throw Error('IDENTITY_CHANGED');
+  const fd = fs.openSync(item.path, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+  try {
+    const opened = fs.fstatSync(fd, {bigint: true});
+    if (identity(opened) !== identity(before)) throw Error('IDENTITY_CHANGED');
+    const hash = crypto.createHash('sha256');
+    let total = 0;
+    for (;;) {
+      const count = fs.readSync(fd, buffer, 0, buffer.length, null);
+      if (!count) break;
+      hash.update(buffer.subarray(0, count)); total += count;
+    }
+    if (BigInt(total) !== opened.size ||
+        identity(fs.fstatSync(fd, {bigint: true})) !== identity(before) ||
+        identity(fs.lstatSync(item.path, {bigint: true})) !== identity(before))
+      throw Error('IDENTITY_CHANGED');
+    result[item.name] = hash.digest('hex');
+  } finally { fs.closeSync(fd); }
+}
+parentPort.postMessage(result);
+`;
+const workers = [];
+const jobs = Array.from({length: Math.min(4, input.length)}, (_, slot) =>
+  new Promise((resolve, reject) => {
+    let result;
+    const worker = new Worker(program, {eval: true,
+      workerData: input.filter((_, index) => index % 4 === slot)});
+    workers.push(worker);
+    worker.once('message', value => { result = value; });
+    worker.once('error', reject);
+    worker.once('exit', code => {
+      if (code !== 0 || result === undefined) reject(Error('ARTIFACT_READ_FAILED'));
+      else resolve(result);
+    });
+  }));
+Promise.all(jobs).then(results => {
+  process.stdout.write(JSON.stringify(Object.assign(Object.create(null), ...results)));
+}).catch(async () => {
+  await Promise.all(workers.map(worker => worker.terminate()));
+  process.stderr.write('ARTIFACT_READ_FAILED'); process.exitCode = 1;
+});
+"""
+
+
+def _installed_tree(root, node=None):
+    files, directories = _installed_tree_snapshot(root)
+    items = [{"name": name, "path": str(root / name), "size": str(info[0]), "mtime": str(info[1])}
+             for name, info in files.items()]
+    try:
+        result = subprocess.run(
+            [node or shutil.which("node"), "-e", _TREE_HASH_PROGRAM],
+            input=json.dumps(items).encode(), capture_output=True, check=True, timeout=300,
+            env=_child_environment())
+        hashes = json.loads(result.stdout)
+        if (not isinstance(hashes, dict) or hashes.keys() != files.keys()
+                or any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+                       for value in hashes.values())
+                or _installed_tree_snapshot(root) != (files, directories)):
+            raise ValueError("installed tree changed or incomplete reader result")
+    except (OSError, ValueError, TypeError, subprocess.SubprocessError) as error:
+        raise SafeError("RUNTIME_ARTIFACT_CHANGED", "无法核对本地运行制品", 409) from error
+    return hashlib.sha256(canonical(hashes).encode()).hexdigest()
 
 
 def runtime_artifacts():
@@ -118,7 +212,7 @@ def runtime_artifacts():
         built = {path.relative_to(RUNTIME).as_posix(): _file_hash(path) for path in built_files}
         manifest = {"node_version": version, "platform": platform, "arch": arch,
                     "node_sha256": _file_hash(executable), "package_sha256": _file_hash(package_json),
-                    "lock_sha256": _file_hash(lock_path), "installed_tree_sha256": _installed_tree(RUNTIME / "node_modules"),
+                    "lock_sha256": _file_hash(lock_path), "installed_tree_sha256": _installed_tree(RUNTIME / "node_modules", str(executable)),
                     "built_files": built}
     except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
         raise SafeError("RUNTIME_ARTIFACT_CHANGED", "无法核对本地运行制品", 409) from error
