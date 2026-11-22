@@ -9,6 +9,7 @@ export function WorkspaceShell({ title, intro, role, children }: { title: string
   const path = location.pathname, km = path.includes("manage"), sa = /access-review|services|operations|accounts/.test(path);
   const roles = session.profile?.user.roles ?? [], capabilities = session.profile?.capabilities ?? [];
   const allowed = !role || roles.includes(role);
+  const home = roles.includes("employee") ? "/workspace/query" : roles.includes("knowledge_manager") ? "/workspace/manage" : roles.includes("system_admin") ? "/workspace/operations" : "/workspace/query";
   const label = sa && roles.includes("system_admin") ? "系统管理员" : km && roles.includes("knowledge_manager") ? "知识管理员" : roles.includes("employee") ? "普通使用者" : roles.includes("knowledge_manager") ? "知识管理员" : roles.includes("system_admin") ? "系统管理员" : "账号";
   const navigation = sa
     ? [["/workspace/operations", "运行与异常", "◎"], ["/workspace/accounts", "账号与授权", "♙"], ["/workspace/access-review", "审批依据", "▤"], ...(capabilities.includes("system.configure") ? [["/workspace/services", "服务准入", "◇"]] : [])]
@@ -16,12 +17,18 @@ export function WorkspaceShell({ title, intro, role, children }: { title: string
       : [["/workspace/query", "工作台", "▦"], ["/workspace/manuals", "资料查阅", "▤"]];
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (busy) return; const form = new FormData(event.currentTarget); setBusy(true); setError("");
-    try { await session.login(String(form.get("username")), String(form.get("password"))); }
+    try {
+      const current = await session.login(String(form.get("username")), String(form.get("password")));
+      if (["/workspace", "/workspace/query"].includes(path) && !location.search && !current.user.roles.includes("employee")) {
+        const destination = current.user.roles.includes("knowledge_manager") ? "/workspace/manage" : current.user.roles.includes("system_admin") ? "/workspace/operations" : "";
+        if (destination) location.replace(destination);
+      }
+    }
     catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
   }
   return <div className="workspace-frame">
     <a className="skip-link" href="#workspace-content">跳到工作内容</a>
-    <header className="app-header"><a className="brand" href="/workspace/query"><span className="brand-mark" aria-hidden="true"><i/><i/><i/><i/></span>数据中心</a><span className="workspace-name">企业工作空间</span>
+    <header className="app-header"><a className="brand" href={home}><span className="brand-mark" aria-hidden="true"><i/><i/><i/><i/></span>数据中心</a><span className="workspace-name">企业工作空间</span>
       <div className="app-account">{session.profile && <><span>{session.profile.user.display_name}</span><span className="role-label">{label}</span><details className="role-menu"><summary>切换工作区</summary><nav aria-label="已获准工作区">{roles.includes("employee") && <a href="/workspace/query">普通使用者</a>}{roles.includes("knowledge_manager") && <a href="/workspace/manage">知识管理员</a>}{roles.includes("system_admin") && <a href="/workspace/operations">系统管理员</a>}</nav></details><button className="ghost" disabled={busy} onClick={() => { setBusy(true); void session.logout().finally(() => setBusy(false)); }}>退出</button></>}</div>
     </header>
     <aside className="app-sidebar">{allowed && <><a className="primary-link" href={km ? "/workspace/manage#collect" : sa ? "/workspace/services" : "/workspace/query?new=1"}>{km ? "+ 收录资料" : sa ? "核对服务准入" : "+ 新建工作"}</a>

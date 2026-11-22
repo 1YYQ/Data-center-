@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { api, errorMessage, StaleSessionError } from "./api";
 import type { Profile, User } from "./api";
 
-type Session = { profile: Profile | null; error: string; loading: boolean; suspended: boolean; recheck: () => Promise<void>; login: (username: string, password: string) => Promise<void>; logout: () => Promise<void> };
+type Session = { profile: Profile | null; error: string; loading: boolean; suspended: boolean; recheck: () => Promise<void>; login: (username: string, password: string) => Promise<Profile>; logout: () => Promise<void> };
 const Context = createContext<Session | null>(null);
 const storageKey = "dc-workspace-session";
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -53,7 +53,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       api.setSession(response.data.user.id, response.data.csrf_token);
       const current = await api.get<Profile>("/me");
       sessionStorage.setItem(storageKey, JSON.stringify({ owner: current.user.id, csrf: response.data.csrf_token }));
-      setProfile(current); setSuspended(false);
+      setProfile(current); setSuspended(false); return current;
     } catch (error) { clear(errorMessage(error)); throw error; }
   }
   async function logout() { try { await api.request("/auth/logout", { method: "POST" }); } finally { clear(""); } }
