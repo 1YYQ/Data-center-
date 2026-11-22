@@ -1102,3 +1102,8 @@ pre,blockquote {
 .knowledge-main:has(.is-document)>.page-heading { display: none; }
 .version-states strong.confirmed { background: #e6f4ec; color: #1e6348; }
 .task-workbench:not(.has-task)>.work-composer { align-self: start; }
+
+.query-scope { font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+.query-scope>summary { font-weight: 500; }
+.query-scope[open]>summary { margin-bottom: 12px; }
+.scope-options { display: grid; gap: 10px; max-height: 190px; overflow: auto; }

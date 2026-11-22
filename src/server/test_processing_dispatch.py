@@ -25,6 +25,41 @@ from .test_local_parse_pipeline import accept, local_parse, write_saved_bundle
 from .testing_service_use import attest_synthetic_input
 
 
+def test_pilot_consumer_automatically_advances_accepted_parse_and_chunk(local_parse, monkeypatch):
+    from .pilot_dispatch import advance_once
+    if not TOKENIZER.is_file():
+        pytest.skip("fixed local tokenizer is not installed")
+    f = local_parse
+    config = replace(f.config, local_bge_tokenizer=TOKENIZER)
+    f.app.state.settings = config
+    monkeypatch.setattr(local_mineru, "run_standard_bundle", write_saved_bundle)
+    run_id = accept(f)
+    result = advance_once(f.app, gateway_url="http://127.0.0.1:8879", profile_revision=1)
+    assert result["kind"] == "processing" and result["result"]["jobs"][0]["state"] == "needs_review"
+    with f.app.state.session_factory() as db:
+        run = db.get(ParseRun, run_id)
+        assert run.stage_checkpoint["outputs"]["source_qc"]
+        chunk = accept_chunk_set(db, db.get(User, f.actor_id), run, "dc.semantic-bge-m3/1")
+        chunk_id = chunk.id
+        db.commit()
+    result = advance_once(f.app, gateway_url="http://127.0.0.1:8879", profile_revision=1)
+    assert result["kind"] == "processing" and result["result"]["jobs"] == [{"kind":"chunk", "id":chunk_id, "state":"ready"}]
+    with f.app.state.session_factory() as db:
+        assert db.get(ChunkSet, chunk_id).quality_artifact_id
+
+
+def test_document_preparation_mode_rejects_new_query_before_acceptance(local_parse):
+    from sqlalchemy import func
+    from .models import QueryTask
+    f = local_parse
+    f.app.state.query_acceptance_enabled = False
+    response = f.client.post("/knowledge/queries", json={"query":"SYNTHETIC preparation window", "model":"SYNTHETIC-1"},
+        headers={"Idempotency-Key":"synthetic-preparation-no-admission"})
+    assert response.status_code == 409 and response.json()["code"] == "QUERY_PREPARATION_MODE"
+    with f.app.state.session_factory() as db:
+        assert db.scalar(select(func.count()).select_from(QueryTask)) == 0
+
+
 def test_parse_and_chunk_scans_resume_in_stage_order_and_leave_ready_chunks_unchanged(local_parse, monkeypatch):
     if not TOKENIZER.is_file():
         pytest.skip("fixed local tokenizer is not installed")

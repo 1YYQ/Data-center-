@@ -2,7 +2,7 @@
 
 ## 三角色界面重构（2026-11-22，待用户体验验收）
 
-IMPLEMENTED / VERIFIED_LOCAL_SYNTHETIC，用户体验验收EXTERNAL_PENDING。依据用户对价值表达、角色相同及demo感的反馈，员工首页改为具体资料问答/近期答复，KM改为资料总览/筛选→精确版本→原PDF对照，SA改为实际逐用途准入/脱敏任务→管理入口。未增加无后端的办公功能按钮或放宽门禁。
+IMPLEMENTED / VERIFIED_LOCAL_SYNTHETIC；后续用户已确认第一版UI通过，但明确整体功能尚不能验收。新功能与实际依赖端到端的当前调度见tasks顶部，不能用下列mock依赖回归证明其真实性。依据用户对价值表达、角色相同及demo感的反馈，员工首页改为具体资料问答/近期答复，KM改为资料总览/筛选→精确版本→原PDF对照，SA改为实际逐用途准入/脱敏任务→管理入口。未增加无后端的办公功能按钮或放宽门禁。
 
 本轮证据根为`outputs/ui-workspace/2026-11-22/rework/`，完整流程验证构建为`index-DJRzL-r0.js`，最终仅补清固定示例的试点范围文案，构建为`index-Bhlu77kU.js`及`index-BFrt7vzx.css`，其可见说明/示例只填入不提交由`copy-check.json`和`employee-pilot-scope-final.png`实际复核；业务机制与样式未变；最终Git/证据绑定见该目录`candidate-final.json`。
 

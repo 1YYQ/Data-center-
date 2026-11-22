@@ -525,6 +525,13 @@ def test_react_admin_pending_proof_verification_revocation_and_role_refusal(work
     account.get_by_label("操作原因", exact=True).fill("SYNTHETIC activation only")
     account.get_by_role("button", name="确认更新凭据", exact=True).click()
     expect(account).to_contain_text("已启用")
+    account.get_by_role("checkbox", name="知识管理员", exact=True).check()
+    page.once("dialog", lambda dialog: dialog.accept())
+    account.get_by_role("button", name="确认更新角色", exact=True).click()
+    page.get_by_text("角色已更新", exact=False).wait_for()
+    db.expire_all()
+    assert set(db.scalar(select(User).where(User.username == username)).roles) == {"employee", "knowledge_manager"}
+    assert db.scalar(select(func.count()).select_from(AuthorizationGrant)) == before
     page.once("dialog", lambda dialog: dialog.accept())
     account.get_by_role("button", name="停用账号并撤销会话", exact=True).click()
     expect(account).to_contain_text("已停用")
@@ -578,6 +585,15 @@ def test_react_admin_pending_proof_verification_revocation_and_role_refusal(work
     db.expire_all(); assert g.approval_is_current(db, db.get(BusinessApproval, positive.id))
     assert db.scalar(select(func.count()).select_from(AuthorizationGrant)) == before
     _screenshot(f, "admin-verified")
+    grant_panel = page.get_by_role("region", name="按审批创建资料授权", exact=True)
+    grant_panel.get_by_role("button", name="创建此项资料授权", exact=True).click()
+    page.get_by_text("资料授权已创建", exact=False).wait_for()
+    db.expire_all()
+    granted = db.scalar(select(AuthorizationGrant).where(AuthorizationGrant.approval_id == positive.id))
+    assert granted and granted.subject_user_id == positive.applicant and granted.operation == "document.read"
+    assert granted.knowledge_base_id == f.kb.id and granted.category == scope["category"]
+    assert db.scalar(select(func.count()).select_from(AuthorizationGrant)) == before + 1
+    expect(grant_panel.get_by_role("button", name="此项已有有效授权", exact=True)).to_be_disabled()
     page.get_by_label("已核实撤销证据引用", exact=True).fill(revoke_proof.id)
     page.get_by_label("登记说明", exact=True).fill("SYNTHETIC external revocation exact proof checked")
     page.get_by_role("button", name="登记外部撤销", exact=True).click()
@@ -586,7 +602,10 @@ def test_react_admin_pending_proof_verification_revocation_and_role_refusal(work
     revocation = db.scalar(select(ApprovalRevocation).where(ApprovalRevocation.approval_id == positive.id))
     assert revocation and not g.approval_is_current(db, db.get(BusinessApproval, positive.id))
     expect(page.locator(".facts-grid")).to_contain_text(revocation.id)
-    assert db.scalar(select(func.count()).select_from(AuthorizationGrant)) == before
+    assert db.scalar(select(func.count()).select_from(AuthorizationGrant)) == before + 1
+    listed = page.request.get(f.address + f"admin/grants?user_id={positive.applicant}").json()["items"]
+    assert next(row for row in listed if row["id"] == granted.id)["effective"] is False
+    expect(grant_panel.get_by_role("button", name="创建此项资料授权", exact=True)).to_be_disabled()
     _screenshot(f, "admin-revoked")
     page.get_by_role("button", name="退出", exact=True).click()
     _login(f, "access-review", f.employee, "synthetic employee password")

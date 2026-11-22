@@ -12,6 +12,19 @@ from .services import SafeError, can_read_task, task_view
 def register_workspace_routes(app: FastAPI):
     from .app import _user_or_401
 
+    @app.get("/knowledge/query-scopes")
+    def query_scopes(request: Request, limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0),
+                     db: Session = Depends(get_db)):
+        from .models import KnowledgeBase
+        from .services import can_query_kb, has_permission
+        actor, _ = _user_or_401(request, db)
+        if not has_permission(actor, "knowledge.query"):
+            raise SafeError("FORBIDDEN", "当前账号没有资料查询权限", 403)
+        rows = db.scalars(select(KnowledgeBase).where(KnowledgeBase.status == "active")
+            .order_by(KnowledgeBase.id).offset(offset).limit(limit + 1)).all()
+        return {"items": [{"id": row.id, "name": row.name} for row in rows[:limit] if can_query_kb(db, actor, row.id)],
+                "next_offset": offset + limit if len(rows) > limit else None}
+
     def page_view(db, actor, statement, limit, offset):
         rows = list(db.scalars(statement.order_by(QueryTask.created_at.desc(), QueryTask.id.desc()).offset(offset).limit(limit + 1)))
         items = []

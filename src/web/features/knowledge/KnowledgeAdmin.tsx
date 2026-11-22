@@ -132,6 +132,30 @@ function KnowledgeWorkspace() {
     window.addEventListener("focus", verify);
     return () => { active = false; lease.dispose(); clearInterval(timer); window.removeEventListener("focus", verify); };
   }, [kb, documentOpen]);
+  const parsingPending = Boolean(currentRun && ["pending", "running"].includes(currentRun.status));
+  const chunksPending = sets.some(row => row.status === "building");
+  useEffect(() => {
+    if (!run || (!parsingPending && !chunksPending)) return;
+    let active = true, pending = false;
+    async function progress() {
+      if (pending || document.hidden || !navigator.onLine || op.busy) return;
+      pending = true;
+      try {
+        if (parsingPending) {
+          const current = await api.get<ParseRun>(`/parse-runs/${id(run)}`);
+          if (!active) return;
+          setCurrentRun(current);
+          if (!["pending", "running"].includes(current.status)) await op.perform(() => loadRun(run));
+        } else {
+          const response = await api.get<{items: ChunkSet[]}>(`/parse-runs/${id(run)}/chunk-sets`);
+          if (active) setSets(response.items);
+        }
+      } catch {if (active) op.say("处理进度暂不可读取，请恢复连接后刷新原批次；不会重复请求解析或切分。");}
+      finally {pending = false;}
+    }
+    const timer = setInterval(() => void progress(),2000);
+    return () => {active = false; clearInterval(timer);};
+  }, [run, parsingPending, chunksPending, op.busy]);
   useEffect(() => {
     if (confirmationJump) document.getElementById("knowledge-confirmation-kind")?.focus();
   }, [confirmationJump]);

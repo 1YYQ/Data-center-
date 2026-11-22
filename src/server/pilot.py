@@ -87,6 +87,8 @@ def load_settings(config_path: Path | str = DEFAULT_CONFIG) -> Settings:
     settings = Settings(database_url=_database_url(config), storage_dir=storage,
         local_bge_model_dir=model_dir,
         local_bge_tokenizer=Path(tokenizer) if tokenizer else None,
+        local_mineru_executable=Path(config["local_mineru_executable"]).resolve() if config.get("local_mineru_executable") else Settings.local_mineru_executable,
+        local_mineru_home=Path(config["local_mineru_home"]).resolve() if config.get("local_mineru_home") else Settings.local_mineru_home,
         query_service_mode="selected_service", query_max_inflight=4)
     settings.ensure_dirs()
     return settings
@@ -854,69 +856,77 @@ def serve(config_path: Path | str = DEFAULT_CONFIG, host: str = "127.0.0.1", por
           *, admin_only: bool = False) -> None:
     if host not in {"127.0.0.1", "localhost"}:
         raise ValueError("Pilot server is loopback-only")
-    settings = load_settings(config_path)
-    from .app import create_app
-    import uvicorn
-    import threading
-    application = create_app(settings)
-    if not admin_only:
-        problems = _readiness(config_path, application)
-        if problems:
-            application.state.engine.dispose()
-            raise RuntimeError("Pilot query runtime is not ready: " + ", ".join(problems) + "; use `serve --admin-only` for setup")
-        # Loading the approved offline weights is startup work, not a business
-        # query. Complete it before opening the listener or spending a task's
-        # finite runtime lease. embed() reuses this exact integrity-checked
-        # cache and still rechecks the file identity on every real invocation.
-        from . import local_bge
-        endpoint = application.state.service_endpoints.get(local_bge.ENDPOINT_REF)
-        if not isinstance(endpoint, local_bge.LocalBgeEndpoint):
-            application.state.engine.dispose()
-            raise RuntimeError("Pilot requires the approved local embedding endpoint")
-        try:
-            endpoint.preload()
-        except Exception:
-            application.state.engine.dispose()
-            raise
-        from .testing_service_use import install_synthetic_answer_fixture
-        sample = _read_config(config_path)[0]["synthetic_allowlist"]
-        install_synthetic_answer_fixture(application, actor_id=sample["employee_user_id"],
-            knowledge_base_id=sample["knowledge_base_id"], version_id=sample["version_id"],
-            parse_run_id=sample["parse_run_id"], source_sha256=sample["source_sha256"],
-            query=sample["query"], model=sample["model"], allowed_modes=("answer", "retrieve"))
-    server = uvicorn.Server(uvicorn.Config(application, host=host, port=port, access_log=False))
-    stopped = threading.Event()
-
-    def consume_queries() -> None:
-        from .worker import run_one
-        gateway = f"http://127.0.0.1:{port}"
-        while not stopped.is_set():
-            if not server.started:
-                stopped.wait(.25)
-                continue
+    # Bind before loading weights: a second launch on the live port must fail
+    # without creating another model or touching the configured database.
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind((host, port))
+        listener.listen(socket.SOMAXCONN)
+        settings = load_settings(config_path)
+        from .app import create_app
+        import uvicorn
+        import threading
+        application = create_app(settings)
+        application.state.query_acceptance_enabled = not admin_only
+        if not admin_only:
+            problems = _readiness(config_path, application)
+            if problems:
+                application.state.engine.dispose()
+                raise RuntimeError("Pilot query runtime is not ready: " + ", ".join(problems) + "; use `serve --admin-only` for setup")
+            # Loading the approved offline weights is startup work, not a business
+            # query. Complete it before opening the listener or spending a task's
+            # finite runtime lease. embed() reuses this exact integrity-checked
+            # cache and still rechecks the file identity on every real invocation.
+            from . import local_bge
+            endpoint = application.state.service_endpoints.get(local_bge.ENDPOINT_REF)
+            if not isinstance(endpoint, local_bge.LocalBgeEndpoint):
+                application.state.engine.dispose()
+                raise RuntimeError("Pilot requires the approved local embedding endpoint")
             try:
-                run_one(settings, gateway_url=gateway,
-                    profile_id="local-pi", profile_revision=int(_read_config(config_path)[0].get("pi_profile_revision", 1)))
-            except Exception as error:
-                # Do not blindly rescan after an unclassified failure: it may
-                # have happened after an external effect. Stop the service and
-                # leave the durable task/call ledger for explicit reconciliation.
-                print(f"Pilot query worker stopped ({type(error).__name__}); inspect the durable task ledger before restart.", file=sys.stderr)
-                stopped.set()
-                server.should_exit = True
-                return
-            stopped.wait(.35)
+                endpoint.preload()
+            except Exception:
+                application.state.engine.dispose()
+                raise
+            from .testing_service_use import install_synthetic_answer_fixture
+            sample = _read_config(config_path)[0]["synthetic_allowlist"]
+            install_synthetic_answer_fixture(application, actor_id=sample["employee_user_id"],
+                knowledge_base_id=sample["knowledge_base_id"], version_id=sample["version_id"],
+                parse_run_id=sample["parse_run_id"], source_sha256=sample["source_sha256"],
+                query=sample["query"], model=sample["model"], allowed_modes=("answer", "retrieve"))
+        server = uvicorn.Server(uvicorn.Config(application, host=host, port=port, access_log=False))
+        stopped = threading.Event()
 
-    consumer = None
-    if not admin_only:
-        consumer = threading.Thread(target=consume_queries, name="pilot-query-worker", daemon=True)
+        def consume_queries() -> None:
+            from .pilot_dispatch import advance_once, advance_processing_once
+            gateway = f"http://127.0.0.1:{port}"
+            while not stopped.is_set():
+                if not server.started:
+                    stopped.wait(.25)
+                    continue
+                try:
+                    if admin_only:
+                        advance_processing_once(application)
+                    else:
+                        advance_once(application, gateway_url=gateway,
+                            profile_revision=int(_read_config(config_path)[0].get("pi_profile_revision", 1)))
+                except Exception as error:
+                    # Do not blindly rescan after an unclassified failure: it may
+                    # have happened after an external effect. Stop the service and
+                    # leave the durable task/call ledger for explicit reconciliation.
+                    print(f"Pilot consumer stopped ({type(error).__name__}); inspect the durable task ledger before restart.", file=sys.stderr)
+                    stopped.set()
+                    server.should_exit = True
+                    return
+                stopped.wait(.35)
+
+        consumer = threading.Thread(target=consume_queries, name="pilot-consumer", daemon=False)
         consumer.start()
-    try:
-        server.run()
-    finally:
-        stopped.set()
-        if consumer:
-            consumer.join(timeout=10)
+        try:
+            server.run(sockets=[listener])
+        finally:
+            stopped.set()
+            if consumer:
+                consumer.join()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -935,7 +945,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
-    serve_parser.add_argument("--admin-only", action="store_true", help="Serve management APIs without query fixture or background query worker")
+    serve_parser.add_argument("--admin-only", action="store_true", help="Serve document preparation APIs/workers without new query acceptance or BGE preload")
     credentials_parser = sub.add_parser("credentials", help="Read locally DPAPI-encrypted pilot credentials")
     credentials_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     credentials_parser.add_argument("--show", action="store_true", help="Display passwords in this local terminal")

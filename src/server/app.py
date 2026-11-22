@@ -397,6 +397,33 @@ def create_app(config: Settings | None = None) -> FastAPI:
             db.commit()
         return _json_response({"user": user_view(target)}, response, target.authz_revision)
 
+    @app.get("/admin/grants")
+    def list_grants(request: Request, user_id: str | None = None, limit: int = Query(50, ge=1, le=100),
+                    offset: int = Query(0, ge=0), db: Session = Depends(get_db)) -> dict[str, Any]:
+        actor, _ = _user_or_401(request, db)
+        _require_permission(actor, "access.manage")
+        from .governance import approval_is_manageable
+        from .services import _utc
+        statement = select(AuthorizationGrant).order_by(AuthorizationGrant.id)
+        if user_id is not None:
+            statement = statement.where(AuthorizationGrant.subject_user_id == user_id)
+        rows = db.scalars(statement.offset(offset).limit(limit + 1)).all()
+        items = []
+        for row in rows[:limit]:
+            approval = db.get(BusinessApproval, row.approval_id) if row.approval_id else None
+            if not approval or not approval_is_manageable(db, actor, approval):
+                continue
+            target = db.get(User, row.subject_user_id)
+            items.append({"id": row.id, "user_id": row.subject_user_id, "approval_id": row.approval_id,
+                "knowledge_base_id": row.knowledge_base_id, "document_id": row.document_id,
+                "operation": row.operation, "level": row.level, "category": row.category, "need_class": row.need_class,
+                "valid_until": row.valid_until.isoformat() if row.valid_until else None,
+                "effective": bool(target and target.status == "active" and row.revoked_at is None
+                    and (row.valid_from is None or _utc(row.valid_from) <= utc_now())
+                    and (row.valid_until is None or _utc(row.valid_until) > utc_now())
+                    and approval_allows_grant(approval, row, utc_now()))})
+        return {"items": items, "next_offset": offset + limit if len(rows) > limit else None}
+
     @app.post("/admin/grants", status_code=201)
     def create_grant(payload: GrantInput, request: Request, db: Session = Depends(get_db), idempotency_key: Annotated[str | None, Header()] = None) -> dict[str, Any]:
         actor, session = _user_or_401(request, db)
@@ -1253,6 +1280,8 @@ def create_app(config: Settings | None = None) -> FastAPI:
         from .services import require_csrf
 
         require_csrf(request, session)
+        if not getattr(app.state, "query_acceptance_enabled", True):
+            raise SafeError("QUERY_PREPARATION_MODE", "当前处于资料准备窗口，新查询尚未受理。可继续查阅已有记录，待管理员恢复查询服务后再提交。", 409)
         query_payload = payload.model_dump()
         mode = payload.service_mode if "service_mode" in payload.model_fields_set else getattr(config, "query_service_mode", "local")
         if mode not in {"local", "selected_service"}:

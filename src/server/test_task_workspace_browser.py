@@ -80,12 +80,18 @@ def test_task_workbench_query_share_revoke_sources_and_recovery(child_answer_pip
                 assert route.fetch().status == 202
                 route.abort("failed")
             page.route("**/knowledge/queries", lose_reply, times=1)
+            page.locator(".query-scope > summary").click()
+            page.get_by_role("checkbox", name="使用当前全部获权资料", exact=True).uncheck()
+            expect(page.get_by_role("button", name="查询资料", exact=True)).to_be_disabled()
+            page.locator(".scope-options input").first.check()
+            expect(page.get_by_role("button", name="查询资料", exact=True)).to_be_enabled()
             page.get_by_label("问题", exact=True).fill(QUERY)
             page.get_by_role("button", name="查询资料", exact=False).click()
             page.get_by_text("原操作结果待核对", exact=True).wait_for()
             with f.app.state.session_factory() as db:
                 task = db.scalar(select(QueryTask).where(QueryTask.owner_user_id == employee_id))
                 assert task and task.status == "pending"; task_id = task.id
+                assert task.input_snapshot["knowledge_base_ids"] == [f.kb_id]
             page.reload(wait_until="networkidle")
             assert QUERY not in page.evaluate("JSON.stringify(Object.values(sessionStorage))")
             page.get_by_role("button", name="恢复原提交", exact=True).click()
