@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ProtectedImage } from "../../ProtectedImage";
+import { SourceLink } from "../../SourceReader";
 import { api, id } from "../../api";
 import { formValues, text } from "../../components";
 import { processingLabel } from "./processingLabels";
@@ -9,9 +11,9 @@ const correctableKinds = new Set(["paragraph", "title", "step", "warning", "head
 type TextCorrection = { block_id: string; text?: string; kind?: string; reason: string; basis: { file_page: number; description: string } };
 
 export function OriginalLink({ base, page, label }: { base: string; page?: number; label?: string }) {
-  return <a href={base + "/file" + (page ? "#page=" + page : "")} target="_blank" rel="noopener noreferrer">
+  return <SourceLink documentId={base.split("/")[2]} versionId={base.split("/")[4]} page={page}>
     {label ?? (page ? `打开原文第 ${page} 页` : "打开此版本原文 PDF")}
-  </a>;
+  </SourceLink>;
 }
 
 export function blockName(block: Block) {
@@ -20,19 +22,7 @@ export function blockName(block: Block) {
 }
 
 function SourceImage({ src, run, alt }: { src: string; run: string; alt: string }) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  if (failed) return <span role="status" className="muted">
-    原图暂不可读取，请核对原页。 <button type="button" className="ghost" onClick={() => setFailed(false)}>重试读取原图</button>
-  </span>;
-  return <>
-    {!loaded && <span role="status" className="locator">正在读取原图…</span>}
-    <img src={src} alt={alt} loading="lazy" onLoad={() => setLoaded(true)} onError={() => {
-      setFailed(true); setLoaded(false);
-      // A missing crop and revoked access both intentionally return 404.
-      void api.get(`/parse-runs/${id(run)}`).catch(() => {});
-    }} />
-  </>;
+  return <ProtectedImage src={src} accessPath={`/parse-runs/${id(run)}`} alt={alt}/>;
 }
 
 function SourcePreview({ run, src, label, alt }: { run: string; src: string; label: string; alt: string }) {

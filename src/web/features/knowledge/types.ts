@@ -1,5 +1,5 @@
 import { stateLabel } from "../../labels";
-export type Version = { id: string; revision: number; revision_label: string | null; version_no: number; publish_status: string; reference_access_state: string; selected_chunk_set_id?: string | null; selected_review_set_id?: string | null };
+export type Version = { id: string; revision: number; revision_label: string | null; version_no: number; applicability_status?: string; content_review_status?: string; publish_status: string; reference_access_state: string; selected_chunk_set_id?: string | null; selected_review_set_id?: string | null };
 type TableCell = { text: string; row?: number; column?: number; header?: boolean; header_scope?: "row" | "col" | "rowgroup" | "colgroup"; rowspan?: number; colspan?: number; graphic_keys?: { label: string; operation: string }[] };
 type CellPosition = { row: number; column: number };
 export type SourceRegion = { file_page: number; printed_page?: string | null; geometry_status: string; bbox_normalized?: number[] };

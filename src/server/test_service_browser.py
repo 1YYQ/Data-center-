@@ -98,7 +98,7 @@ def test_react_services_protocol_tests_previews_activation_recovery_and_safe_sto
                 page.reload(wait_until="networkidle")
                 recover.click()
                 expect(recover).to_have_count(0)
-                assert len(receipts) == 2 and receipts[0] == receipts[1]
+                assert len(receipts) == 1, "GET receipt recovery must not repeat the original selection POST"
                 page.unroute(apply_url)
                 _select(selections, "用途").select_option(purpose)
                 # The service configuration detail selection is local to a page load.

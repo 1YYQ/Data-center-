@@ -189,7 +189,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
             request.scope["path"] = request.scope["path"][len("/api/v1"):]
             request.scope["root_path"] = "/api/v1"
         response = await call_next(request)
-        if any(request.scope["path"].startswith(prefix) for prefix in ("/documents", "/tasks", "/knowledge", "/parse-runs", "/admin", "/auth", "/me", "/capabilities", "/conversations", "/private/runtime")):
+        if any(request.scope["path"].startswith(prefix) for prefix in ("/documents", "/tasks", "/knowledge", "/parse-runs", "/admin", "/auth", "/me", "/capabilities", "/conversations", "/workspace-data", "/operation-receipts", "/private/runtime")):
             response.headers.setdefault("Cache-Control", "private, no-store")
         return response
 
@@ -204,7 +204,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
 
     @app.get("/workspace/{page}", include_in_schema=False)
     def workspace_page(page: str):
-        if page not in {"query", "manage", "access-review", "services"}:
+        if page not in {"query", "manuals", "manage", "access-review", "services", "operations", "accounts"}:
             return HTMLResponse("<h1>页面不存在</h1>", status_code=404)
         index = WEB_DIST / "index.html"
         if not index.is_file():
@@ -1188,6 +1188,13 @@ def create_app(config: Settings | None = None) -> FastAPI:
                      "X-Formal-Use-Requires-Validation": "true", "Cache-Control": "private, no-store",
                      "X-Content-Type-Options": "nosniff"})
 
+    @app.get("/documents/{document_id}/versions/{version_id}/file-access")
+    def source_file_access(document_id: str, version_id: str, request: Request, db: Session = Depends(get_db)):
+        # Use exactly the original-file gate, including current source availability.
+        original = source_file(document_id, version_id, request, db)
+        return {"read_mode": original.headers["X-Document-Read-Mode"],
+                "publish_status": original.headers["X-Document-Publication-State"]}
+
     @app.get("/parse-runs/{parse_run_id}/service-job")
     def parse_service_job(parse_run_id: str, request: Request, db: Session = Depends(get_db)):
         from .parse_jobs import ParseServiceJob
@@ -1630,7 +1637,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
     def operation_tasks(request: Request, db: Session = Depends(get_db)) -> dict[str, Any]:
         actor, _ = _user_or_401(request, db)
         _require_permission(actor, "operations.read")
-        return {"items": [sanitized_task_view(task, viewer_user_id=actor.id) for task in db.scalars(select(QueryTask).order_by(QueryTask.created_at.desc()).limit(200)).all()]}
+        return {"items": [sanitized_task_view(task) for task in db.scalars(select(QueryTask).order_by(QueryTask.created_at.desc()).limit(200)).all()]}
 
     from .governance_api import register_governance_routes
     from .runtime_api import register_runtime_routes
@@ -1649,6 +1656,8 @@ def create_app(config: Settings | None = None) -> FastAPI:
     register_service_use_routes(app)
     from .feedback_api import register_feedback_routes
     register_feedback_routes(app)
+    from .workspace_api import register_workspace_routes
+    register_workspace_routes(app)
     from .index_api import register_index_routes
     from .evidence_api import register_evidence_routes
     register_index_routes(app)

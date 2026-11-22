@@ -81,7 +81,7 @@ def workspace(request):
             with sync_playwright() as pw:
                 browser = pw.chromium.launch(headless=True, executable_path=str(chrome),
                     args=["--disable-background-networking", "--disable-component-update"])
-                context = browser.new_context(viewport={"width": 1440, "height": 1000}, service_workers="block")
+                context = browser.new_context(viewport={"width": 1440, "height": 900}, service_workers="block")
                 # Intercept external requests only. Installed Chrome may be newer
                 # than Playwright's protocol; relaying local multipart through a
                 # catch-all route can corrupt its boundary/body on that pairing.
@@ -140,6 +140,7 @@ def _login(f, path, user, password):
 
 
 def _screenshot(f, name):
+    f.page.evaluate("window.scrollTo(0,0)")
     f.page.screenshot(path=str(f.out / (name + ".png")), full_page=True)
 
 
@@ -154,65 +155,8 @@ def _select(scope, label):
     return scope.locator("label").filter(has_text=re.compile("^" + re.escape(label))).locator("select")
 
 
-def test_react_query_unknown_response_resume_input_result_and_revocation(workspace):
-    from playwright.sync_api import expect
-    f = workspace
-    page = f.page
-    _login(f, "query", f.employee, "synthetic employee password")
-    keys = []
-    page.on("request", lambda request: keys.append(request.headers.get("idempotency-key"))
-        if request.method == "POST" and request.url.endswith("/knowledge/queries") else None)
-    def lose_response(route):
-        response = route.fetch()
-        assert response.status == 202
-        route.abort("failed")
-    page.route("**/knowledge/queries", lose_response, times=1)
-    page.get_by_label("问题", exact=True).fill("DEMO-1 startup")
-    page.get_by_role("button", name="提交查询", exact=True).click()
-    page.get_by_text("操作结果未知", exact=False).first.wait_for()
-    f.db.expire_all()
-    task = f.db.scalar(select(QueryTask).where(QueryTask.owner_user_id == f.employee.id))
-    assert task and task.status == "pending"
-    task_id = task.id
-    page.reload(); page.wait_for_load_state("networkidle")
-    page.get_by_role("button", name="恢复原提交", exact=True).click()
-    page.get_by_text("正在查询", exact=True).wait_for()
-    assert len(keys) == 2 and keys[0] and keys[0] == keys[1]
-    assert f.db.scalar(select(func.count()).select_from(QueryTask).where(QueryTask.owner_user_id == f.employee.id)) == 1
-    f.checks.append("lost committed response recovered across refresh with same idempotency key and one original task")
-    assert run_one(f.config, gateway_url=f.address, task_id=task_id)["state"] == "waiting_input"
-    page.get_by_role("button", name="刷新原查询状态", exact=True).click()
-    page.get_by_label("补充设备型号", exact=True).wait_for()
-    _screenshot(f, "query-waiting-input")
-    page.get_by_label("补充设备型号", exact=True).fill("DEMO-1")
-    page.get_by_role("button", name="补充并继续原任务", exact=True).click()
-    page.get_by_text("正在查询", exact=True).wait_for()
-    result = run_one(f.config, gateway_url=f.address, task_id=task_id)
-    assert result["state"] == "succeeded", result
-    page.get_by_text("已找到可核对依据", exact=True).wait_for(timeout=30000)
-    expect(page.locator(".result-panel")).to_contain_text(STARTUP)
-    expect(page.locator(".result-panel")).to_contain_text(WARNING)
-    assert "MODEL PROSE" not in page.locator(".result-panel").inner_text()
-    href = page.get_by_role("link", name="核对原文", exact=False).first.get_attribute("href")
-    assert href.endswith("#page=1")
-    source = f.context.request.get(f.address.rstrip("/") + href.split("#")[0])
-    assert source.status == 200 and source.body() == synthetic_pdf()
-    _screenshot(f, "query-result-with-warning")
-    page.reload(); page.wait_for_load_state("networkidle")
-    page.get_by_text("已找到可核对依据", exact=True).wait_for()
-    expect(page.locator(".result-panel")).to_contain_text(WARNING)
-    f.db.expire_all()
-    grant = f.db.scalar(select(AuthorizationGrant).where(AuthorizationGrant.subject_user_id == f.employee.id,
-        AuthorizationGrant.operation == "document.read"))
-    grant.revoked_at = utc_now(); f.db.commit()
-    page.get_by_role("button", name="刷新原查询状态", exact=True).click()
-    expect(page.locator("body")).not_to_contain_text(STARTUP)
-    expect(page.locator("body")).not_to_contain_text(WARNING)
-    assert page.get_by_role("link", name="核对原文", exact=False).count() == 0
-    assert f.context.request.get(f.address.rstrip("/") + href.split("#")[0]).status == 404
-    _screenshot(f, "query-revoked-cleared")
-    f.checks.extend(["actual missing-model response resumes original task and real pinned Node worker executes synthetic HTTP",
-        "answer contains complete synthetic startup and warning plus exact-version PDF page link", "refresh restores result; current document revocation clears quote and PDF access"])
+# The former query flow is now covered by test_task_workspace_browser.py with
+# formal child evidence, GET-only receipt recovery, controlled PDF and share revocation.
 
 
 @pytest.fixture
@@ -369,8 +313,11 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
     db.expire_all()
     run = db.get(ParseRun, run_id)
     assert run.document_version_id == draft.id and run.origin == "local" and run.status == "pending"
-    refresh_run = page.get_by_role("button", name="刷新解析批次", exact=True)
-    refresh_run.click()
+    def refresh_run():
+        button = page.get_by_role("button", name="刷新解析批次", exact=True)
+        if not button.is_visible(): page.get_by_text("解析批次与处理详情", exact=True).click()
+        button.click()
+    refresh_run()
     page.get_by_text("已读取最新批次状态。", exact=True).wait_for()
     db.refresh(run)
     assert run.status == "pending"
@@ -383,12 +330,15 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
     parsed_blocks = db.scalars(leaves).all()
     assert parsed_blocks and STARTUP in "\n".join(block.text_content for block in parsed_blocks)
     assert WARNING in "\n".join(block.text_content for block in parsed_blocks)
-    refresh_run.click()
+    refresh_run()
+    page.get_by_text("查看处理与源核验状态", exact=True).click()
     milestones = page.locator(".pdf-milestones")
     expect(milestones.locator("div").filter(has_text="源质量检查").get_by_text("通过", exact=True)).to_be_visible()
     expect(milestones.locator("div").filter(has_text="源人工核验").get_by_text("待核验", exact=True)).to_be_visible()
     source = page.get_by_role("link", name="打开此版本原文 PDF", exact=True).get_attribute("href")
-    assert f.context.request.get(f.address.rstrip("/") + source).body() == original
+    assert "version=" + draft.id in source
+    source = f"/documents/{doc.id}/versions/{draft.id}/file"
+    assert f.context.request.get(f.address + f"documents/{doc.id}/versions/{draft.id}/file").body() == original
     page.get_by_role("button", name="发布检查", exact=True).click()
     page.get_by_role("button", name="检查发布条件", exact=True).click()
     page.get_by_role("heading", name="仍有阻断项", exact=True).wait_for()
@@ -403,6 +353,10 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
         page.get_by_text("逐块核验结果已保存。", exact=True).wait_for()
         expect(article).to_contain_text("核验通过")
     _screenshot(f, "manager-reviewed-blocks")
+    page.set_viewport_size({"width":1366,"height":900})
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    _screenshot(f, "manager-reviewed-blocks-1366")
+    page.set_viewport_size({"width":1440,"height":900})
     db.expire_all()
     assert [(block.revision, block.review_status) for block in db.scalars(leaves)] == [(1, "approved")] * len(parsed_blocks)
     assert source_verification(db, run)["state"] == "pending"
@@ -472,7 +426,7 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
     chunk_set_id = accepted.value.json()["id"]
     chunk_set = run_chunk_job(db, chunk_set_id, replace(f.config, local_bge_tokenizer=TOKENIZER.resolve()))
     assert chunk_set.status == "ready" and chunk_set.stage_checkpoint["quality"]["status"] == "passed", chunk_set.stage_checkpoint
-    refresh_run.click()
+    refresh_run()
     _select(page, "匹配本批次且当前有效的专业确认").select_option(professional.id)
     page.get_by_label("本次核验登记说明", exact=True).fill("SYNTHETIC exact procedure and warning checked in the collection")
     with page.expect_response(lambda r: r.request.method == "POST" and r.url.endswith("/review-sets")) as accepted:
@@ -516,7 +470,7 @@ def test_react_manager_review_confirmation_publication_and_access_loss(manager_e
         AuthorizationGrant.operation == "knowledge.manage"))
     grant.revoked_at = utc_now(); db.commit()
     page.get_by_role("button", name="刷新", exact=True).click()
-    page.get_by_role("heading", name="登录工作区", exact=True).wait_for()
+    page.get_by_role("heading", name="登录数据中心", exact=True).wait_for()
     expect(page.locator("body")).not_to_contain_text(STARTUP)
     assert page.get_by_role("link", name="打开此版本原文 PDF", exact=True).count() == 0
     _screenshot(f, "manager-access-cleared")
@@ -557,6 +511,24 @@ def test_react_admin_pending_proof_verification_revocation_and_role_refusal(work
     db.commit()
     before = db.scalar(select(func.count()).select_from(AuthorizationGrant))
     _login(f, "access-review", f.administrator, "synthetic admin password")
+    page.goto(f.address + "workspace/accounts")
+    page.get_by_text("创建平台账号", exact=True).click()
+    username = "synthetic-ui-account-" + uuid4().hex[:12]
+    page.get_by_label("登录账号", exact=True).fill(username)
+    page.get_by_label("显示名称", exact=True).fill("模拟生命周期账号")
+    page.get_by_role("button", name="登记账号", exact=True).click()
+    account = page.locator(".account-row").filter(has_text=username)
+    account.get_by_text("管理此账号", exact=True).click()
+    account.get_by_label("新口令", exact=True).fill("SYNTHETIC workspace account password")
+    account.get_by_label("操作原因", exact=True).fill("SYNTHETIC activation only")
+    account.get_by_role("button", name="确认更新凭据", exact=True).click()
+    expect(account).to_contain_text("已启用")
+    page.once("dialog", lambda dialog: dialog.accept())
+    account.get_by_role("button", name="停用账号并撤销会话", exact=True).click()
+    expect(account).to_contain_text("已停用")
+    assert db.scalar(select(User).where(User.username == username)).status == "disabled"
+    page.goto(f.address + "workspace/access-review")
+    f.checks.append("actual account creation, credential activation and confirmed deactivation use existing user APIs without granting document access")
     page.get_by_role("button", name="＋ 登记外部审批事实", exact=True).click()
     dialog = page.get_by_role("dialog", name="登记真实审批事实", exact=True)
     values = {"被授权用户 ID": f.administrator.id, "实际审批人": approver_basis.identity["identity_label"],
@@ -616,7 +588,7 @@ def test_react_admin_pending_proof_verification_revocation_and_role_refusal(work
     _screenshot(f, "admin-revoked")
     page.get_by_role("button", name="退出", exact=True).click()
     _login(f, "access-review", f.employee, "synthetic employee password")
-    page.get_by_text("当前账号没有进入本工作区所需的角色，请联系管理员。", exact=True).wait_for()
+    page.get_by_text("当前账号没有进入本工作区所需的角色，请切换到已获准的工作区。", exact=True).wait_for()
     assert page.get_by_role("button", name="＋ 登记外部审批事实", exact=True).count() == 0
     assert positive.id not in page.locator("body").inner_text()
     assert f.context.request.get(f.address + "admin/business-approvals").status == 403

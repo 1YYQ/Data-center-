@@ -43,7 +43,7 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True, executable_path="C:/Program Files/Google/Chrome/Application/chrome.exe",
             args=["--disable-background-networking", "--disable-component-update", "--no-first-run"])
-        context = browser.new_context(viewport={"width": 1440, "height": 1000}, service_workers="block")
+        context = browser.new_context(viewport={"width": 1440, "height": 900}, service_workers="block")
         context.route("**/*", lambda route: route.continue_() if route.request.url.startswith(f.gateway + "/") else route.abort())
         page = context.new_page(); page.set_default_timeout(20000)
         page.on("pageerror", lambda error: errors.append(str(error)))
@@ -57,11 +57,11 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
             expect(page.get_by_role("button", name="退出", exact=True)).to_be_visible()
 
             def submit(question, model):
-                expect(page.locator(".query-panel fieldset.operation-fields")).to_have_attribute("aria-busy", "false", timeout=20000)
-                page.locator(".query-panel form textarea").fill(question)
+                page.goto(f.gateway + "/workspace/query?new=1")
+                page.get_by_label("问题", exact=True).fill(question)
                 page.get_by_label("设备型号（可选）", exact=True).fill(model)
                 with page.expect_response(lambda reply: reply.url.endswith("/knowledge/queries") and reply.request.method == "POST") as accepted:
-                    page.get_by_role("button", name="提交查询", exact=True).click()
+                    page.get_by_role("button", name="提交工作", exact=False).click()
                 assert accepted.value.status == 202
                 return accepted.value.json()["task_id"]
 
@@ -77,16 +77,16 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                 else:
                     outcome = run_one(f.config, task_id=task_id, gateway_url=f.gateway)
                 checks.append({"task_id": task_id, "worker_outcome": outcome, "gateway": list(f.gateway_trace)})
-                page.get_by_role("button", name="刷新原查询状态", exact=True).click()
+                page.get_by_role("button", name="刷新原查询状态", exact=True).click(timeout=35000)
                 if outcome["state"] == "succeeded":
-                    expect(page.get_by_text("已找到可核对依据", exact=True)).to_be_visible(timeout=20000)
+                    expect(page.locator(".badge")).to_have_text("已完成", timeout=25000)
                 elif outcome["state"] == "blocked":
-                    expect(page.get_by_text("查询尚未完成", exact=True)).to_be_visible(timeout=20000)
+                    expect(page.locator(".badge")).to_have_text("需要处理", timeout=25000)
                 return outcome
 
             def no_answer():
-                expect(page.locator(".result-panel .answer")).to_have_count(0)
-                expect(page.locator(".result-panel article.query-evidence")).to_have_count(0)
+                expect(page.locator(".answer")).to_have_count(0)
+                expect(page.locator("article.query-evidence")).to_have_count(0)
 
             if phase == "input":
                 # B: a missing model is a real user input request, not an inferred default.
@@ -99,7 +99,7 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                 page.reload(); page.wait_for_load_state("networkidle")
                 page.get_by_label("补充设备型号", exact=True).fill(MODEL)
                 page.get_by_role("button", name="补充并继续原任务", exact=True).click()
-                expect(page.get_by_text("正在查询", exact=True)).to_be_visible()
+                expect(page.locator(".badge")).to_have_text("排队中")
                 assert execute(missing)["state"] == "succeeded"
                 expect(page.locator(".answer")).to_contain_text(STEP_ONE)
                 expect(page.locator(".answer")).to_contain_text(WARNING)
@@ -112,8 +112,10 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                 evidence = result.json()["evidence"]; assert len(evidence) == 6
                 for item in evidence:
                     assert item["version"]["id"] == f.version_id and item["locator"]["file_page"] == 1
+                page.locator(".result-sources > summary").click()
                 source = page.get_by_role("link", name="核对原文 · PDF 第 1 页", exact=True).first.get_attribute("href")
-                assert context.request.get(f.gateway + source.split("#")[0]).body() == f.original
+                assert "version=" + f.version_id in source and "page=1" in source
+                assert context.request.get(f.gateway + f"/documents/{f.document_id}/versions/{f.version_id}/file").body() == f.original
                 assert len(posts) == 1
                 page.reload(); page.wait_for_load_state("networkidle")
                 expect(page.locator(".answer")).to_contain_text(WARNING)
@@ -130,7 +132,7 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                     outcome = execute(task_id)
                     assert outcome["state"] in {"blocked", "waiting_input"}, outcome
                     no_answer()
-                    expect(page.locator(".status.muted")).to_contain_text("资料")
+                    expect(page.locator(".work-detail-heading p[role=status]")).to_contain_text("资料")
                     page.screenshot(path=str(out / f"b-{name}.png"), full_page=True)
                     checks.append({"scenario": "B", "case": name, "task_id": task_id, "state": "PASS"})
 
@@ -184,7 +186,7 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
                 with f.app.state.session_factory() as db:
                     task = db.get(QueryTask, conflicted)
                     assert task.error_code == "VERSION_CONFLICT", (task.error_code, task.next_action)
-                expect(page.locator(".status.muted")).to_contain_text("冲突")
+                expect(page.locator(".work-detail-heading p[role=status]")).to_contain_text("冲突")
                 no_answer()
                 page.screenshot(path=str(out / "c-conflict-visible.png"), full_page=True)
                 checks.append({"scenario": "C", "case": "current applicable conflict blocks formal facts", "task_id": conflicted, "state": "PASS"})
@@ -193,6 +195,6 @@ def test_pilot_abc_original_input_recovery_draft_reference_and_conflict(child_an
             (out / "observations.json").write_text(json.dumps({"checks": checks, "page_errors": errors,
                 "query_posts": len(posts), "scope": ("synthetic roles/PDF; actual production gates, PG, HTTP and Chrome; version positive uses a real child gateway receipt, negative uses SDK" if phase == "versions" else "synthetic roles/PDF; actual production gates, PG, pinned SDK, HTTP and Chrome")},
                 ensure_ascii=False, indent=2), encoding="utf-8")
-            (out / "last-dom.json").write_text(json.dumps({"fields": page.locator(".query-panel fieldset").evaluate_all('elements => elements.map(e => ({disabled:e.disabled, busy:e.getAttribute("aria-busy"), text:e.innerText}))'), "question_count": page.get_by_label("问题", exact=True).count()}, ensure_ascii=False, indent=2), encoding="utf-8")
+            (out / "last-dom.json").write_text(json.dumps({"fields": page.locator(".work-composer").evaluate_all('elements => elements.map(e => ({disabled:e.disabled, busy:e.getAttribute("aria-busy"), text:e.innerText}))'), "question_count": page.get_by_label("问题", exact=True).count()}, ensure_ascii=False, indent=2), encoding="utf-8")
             page.screenshot(path=str(out / "last-state.png"), full_page=True)
             context.close(); browser.close()

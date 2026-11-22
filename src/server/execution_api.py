@@ -67,7 +67,13 @@ def register_execution_routes(app: FastAPI):
         conversation = owned_conversation(db, actor, conversation_id)
         latest = db.scalar(select(ContextFact).where(ContextFact.conversation_id == conversation.id, ContextFact.fact_key == "device.model").order_by(ContextFact.revision.desc()))
         item = {"key": latest.fact_key, "value": latest.value, "state": latest.state, "source_message_id": latest.source_message_id} if latest else None
-        return _json_response({"conversation_id": conversation.id, "revision": conversation.revision, "condition": item}, response, conversation.revision)
+        head = db.scalar(select(QueryTask).where(QueryTask.conversation_id == conversation.id,
+            QueryTask.owner_user_id == actor.id).order_by(QueryTask.created_at.desc(), QueryTask.id.desc()).limit(1))
+        from .services import can_read_task
+        if head and not can_read_task(db, actor, head):
+            raise SafeError("NOT_FOUND", "对话当前不可访问", 404)
+        return _json_response({"conversation_id": conversation.id, "revision": conversation.revision,
+            "condition": item, "latest_task_id": head.id if head else None}, response, conversation.revision)
 
     @app.post("/conversations/{conversation_id}/conditions")
     def change_condition(conversation_id: str, payload: ConditionInput, request: Request, response: Response,

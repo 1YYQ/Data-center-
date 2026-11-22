@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { api, id } from "../../api";
+import { ProtectedImage } from "../../ProtectedImage";
+import { SourceLink } from "../../SourceReader";
 import "./evidence.css";
 
 type SourcePosition = {
@@ -73,22 +75,12 @@ function EvidenceImage({ path, src, label, alt }: { path: string; src: string; l
 }
 
 function EvidenceImageContent({ path, src, alt }: { path: string; src: string; alt: string }) {
-  const [state, setState] = useState<"loading" | "ready" | "unavailable">("loading");
-  if (state === "unavailable") return <p className="muted" role="status">图像暂不可读取，可打开引用对应的原文。</p>;
-  return <>
-    {state === "loading" && <p className="locator" role="status">正在读取图像…</p>}
-    <img src={src} alt={alt} loading="lazy" onLoad={() => setState("ready")} onError={() => {
-      setState("unavailable");
-      // Binary endpoints can deny an asset or the whole evidence; recheck the
-      // evidence through the existing session/permission gate.
-      void api.get(path).catch(() => {});
-    }} />
-  </>;
+  return <ProtectedImage src={src} accessPath={path} alt={alt}/>;
 }
 
 export function EvidenceCard({ evidence, taskId }: { evidence: Evidence; taskId: string }) {
   const { version, locator } = evidence;
-  const pdf = `/documents/${id(version.document_id)}/versions/${id(version.id)}/file`;
+  const pdf = `/workspace/manuals?document=${id(version.document_id)}&version=${id(version.id)}&task=${id(taskId)}&evidence=${id(evidence.id)}`;
   const path = `/tasks/${id(taskId)}/evidence/${id(evidence.id)}`;
   const pages = sourcePages(evidence);
   const regions = locator?.region ? [locator.region] : locator?.regions ?? [];
@@ -112,14 +104,14 @@ export function EvidenceCard({ evidence, taskId }: { evidence: Evidence; taskId:
     {isRegion && !pages.length && <p className="muted">此图像的原页位置待核对。</p>}
     {pages.length ? <ul className="query-evidence-pages">
       {pages.map(([page, place]) => <li key={page}>
-        <a href={pdf + `#page=${page}`} target="_blank" rel="noopener noreferrer">核对原文 · PDF 第 {page} 页</a>
+        <SourceLink documentId={version.document_id} versionId={version.id} page={page} evidencePath={path}>核对原文 · PDF 第 {page} 页</SourceLink>
         {place.printed_page && <span>印刷页码 {place.printed_page}</span>}
         {(place.section || (pages.length === 1 && commonSection)) && <span>{place.section || commonSection}</span>}
         {regions.some(region => region?.file_page === page && region.geometry_status === "page_only")
           && !regions.some(region => region?.file_page === page && cropAvailable(region)) && <span>仅定位至原页</span>}
       </li>)}
     </ul> : <p className="query-evidence-pages">
-      <a href={pdf} target="_blank" rel="noopener noreferrer">打开同版原文 PDF</a>
+      <SourceLink documentId={version.document_id} versionId={version.id} evidencePath={path}>打开同版原文 PDF</SourceLink>
       <span>{printing ? `印刷页码 ${printing} · PDF 页序待核对` : "原文页序待核对"}</span>
       {commonSection && <span>{commonSection}</span>}
     </p>}
@@ -129,6 +121,6 @@ export function EvidenceCard({ evidence, taskId }: { evidence: Evidence; taskId:
       alt={`PDF 第 ${region.file_page} 页的${region.geometry_status === "table_region_only" ? "原表" : "引用区域"}裁图`} />)}
     {canPreview && assets.map((asset, index) => <EvidenceImage key={asset} path={path} src={path + "/assets/" + id(asset)}
       label={assets.length === 1 ? "查看图像证据" : `查看图像证据 ${index + 1}`} alt={`${evidence.document_title}的原文图像`} />)}
-    <a href={`/workspace/query?manual=${id(version.id)}`}>查阅手册与反馈</a>
+    <a href={pdf}>查阅手册与反馈</a>
   </article>;
 }

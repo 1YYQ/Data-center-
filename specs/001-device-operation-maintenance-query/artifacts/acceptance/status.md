@@ -1,5 +1,24 @@
 # 当前验收状态
 
+## 任务工作台本地实施（2026-11-22）
+
+DONE/VERIFIED_LOCAL_SYNTHETIC：用户批准的新任务工作台已实现三角色真实业务接线。使用构建后的React、已安装Chrome157、实际Pi SDK/HTTP/隔离PGvector/现有原文、权限、来源与交付门禁；资料、人工参考、职责/签认及供应商响应均为合成。新设计批准不等于真实业务或最终审美接受，完整企业A–F仍按本页组织环境NOT_RUN处理。
+
+| 场景 | 实际通过范围 | 本轮证据（均在outputs/ui-workspace/2026-11-22） |
+| --- | --- | --- |
+| 员工工作闭环 | 缺型号保持原任务；正式六证据保留步骤/关键警告/数值与原PDF字节；同工作追问、刷新/离线恢复及历史只读；查证返回保留草稿，旧手册链接可用 | `query-final2.xml`、`task-workbench-browser/report.json`及当前截图 |
+| 型号/资料/版本异常 | 错型号及维护资料不足无答案/引文；新草稿不替换原发布版，明确开放参考仍为draft；实际conflict hold使正式查询以VERSION_CONFLICT阻断并显示冲突 | `negative-and-version-final.xml`、`abc-negative/`、`abc-versions/`。版本正例用生产child工具和真实回环回执，负例使用SDK，不冒充另一轮供应商验证 |
+| 权限与分享撤回 | 仅分享选定快照，不开owner问题/对话；撤回清除已打开答案与原文；独立DR撤销后原PDF404；跨标签Cookie身份与页面绑定不符401，系统管理员仅看脱敏状态 | `query-final2.xml`、`acceptance-cycle10.xml`的HTTP/KM/SA/分享节点及角色观察 |
+| 知识管理员 | 实际新版本上传、持久Standard ZIP→IR/QC、原页/内容块核验、受控模拟签认材料核查、精确候选及索引激活、发布/撤回预检；适用/内容/发布三态分开，缺专业确认阻断，失权清屏 | `acceptance-cycle10.xml`的manager节点、`workspace-browser/task-workbench-v1/manager/`；非新一轮MinerU推理或真实专业签认 |
+| 系统管理员 | 账号登记/凭据激活/确认停用，真实API审批登记/不可信材料拒绝/受控模拟证明核查与撤销，普通员工不可进入；生成/向量/解析三类合成协议自检、预检、逐用途选用与停用，未知选用只GET原回执 | 同周期admin/services节点及各自`observations.json`；不生成企业许可或代员工执行查询 |
+| 服务恢复与unknown | 已知503由原所有者恢复同一task/step/预算身份，既有失败回执保留；截断200保持unknown，无正式快照/普通重试/重复外发；身份读临时失败隐藏受限视图，只读核验后恢复，不误判登出 | `query-final2.xml`、`task-workbench-browser/recovery-checkpoint.json`与`report.json`；故障由本地代理控制，不等于供应商修复或数据库/原件恢复 |
+| 队列与取消 | 四项在途时第五项真实429且不新增任务；工作分页、刷新原任务及服务器确认取消后再刷新均通过；取消后在途为三项 | `query-final2.xml`、`queue-cancel/observations.json`；无Worker/模型的界面准入检查，不重新证明吞吐、长期运行或89份容量 |
+
+最终源/构建、各节点最新有效结果、默认SQLite哈希与临时PG库清理绑定`candidate-final.json`。查询页429/排队恢复的末次修复由query-final2复验；未改动的KM/SA/服务和HTTP/分享源保留acceptance-cycle10证据，不能把旧截图当作改变后的查询页。`negative-and-services.xml`包含25项通过的服务/执行回归及两项旧class定位器失败；后两项只由negative-and-version-final各自补证，不将旧XML改写为全通过。类型检查、最终构建与23项客户端边界通过；构建仍有既有AntD指令和大块体积提示，未升级依赖。
+
+备份保持Disabled，无新备份或完整应用恢复；无企业内容外发、付费压力或BGE并驻。受控原文/原图和结果每10秒复核，并有从读取开始计算的15秒独立显示期限；失权/离线清理不等于召回用户已合法下载的副本。真实签认、真实人工参考及企业逐用途准入只阻断对应真实验收；新UI不扩大既有资料规模和使用许可。
+
+
 2026-11-19：真实A–F及持续对话/查阅/单条分享/反馈扩展仍为NOT_RUN，缺真实职责、适用/专业确认、人工答案及所用服务真实准入；本轮本地实施未升级这些场景。历史EV追踪只适用其绑定候选，最新本地能力和分段证据从[tasks当前调度](../../tasks.md#当前调度与本次审查preflight-001)进入，项目进度仍只在STATUS维护。
 
 并发修复增量：本轮对日志证明批量化、来源指纹兼容、历史分页/失权、满载受理/补充/重试回滚及PG名额竞争作了定向复验；正式Chrome观察按需历史、排队/拒绝和原任务重开。实际SDK＋本地BGE有界并发与10页整库FIFO运行的数值、来源规模和使用边界只在[metrics](../metrics/status.md#本地并发与容量2026-11-19)维护。它们补充前轮受控超时的工程证据，不改变下列真实组织场景NOT_RUN，也不把旧构建截图当作本次网页证据。

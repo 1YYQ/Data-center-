@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentProps } from "react";
 import { api, etag, id } from "../../api";
+import { SourceReader } from "../../SourceReader";
 import { formValues, text } from "../../components";
 import { stateLabel } from "../../labels";
 import { BlockReview, blockName, OriginalLink } from "./BlockReview";
@@ -39,7 +40,9 @@ export function ParseReview({ base, version, runs, run, current, blocks, pages, 
   const currentState = current && processingLabel(current.status, stateLabel(current.status));
   const total = pages?.total_page_count ?? current?.total_page_count;
   return <section aria-labelledby="pdf-review-title" className="pdf-review">
-    <h2 id="pdf-review-title">解析批次与原页核验</h2>
+    <h2 id="pdf-review-title">核对原文，保留关键警告</h2>
+    {currentState && <p className="locator">当前批次：{currentState}</p>}
+    <details className="parse-controls" open={!run || !current || ["pending", "running"].includes(current.status)}><summary>解析批次与处理详情</summary>
     <p className="muted">请求由后台任务处理。刷新可读取最新进度、原页和核验结果。</p>
     <div className="section-actions">
       <button disabled={!canManageSource} onClick={() => void perform(async () => {
@@ -53,7 +56,6 @@ export function ParseReview({ base, version, runs, run, current, blocks, pages, 
       {!runs.length && <option value="">尚无解析批次</option>}
       {runs.map(row => <option key={row.id} value={row.id}>{runName(row)}</option>)}
     </select></label>
-    <p className="pdf-original-link"><OriginalLink base={base} /></p>
     {!run && <p className="muted">此版本尚无解析批次。原件可先单独查阅。</p>}
     {run && !current && <p role="status" className="muted">尚未读取此批次的状态，请刷新重试。</p>}
     {current && <div className="pdf-run-summary">
@@ -82,6 +84,7 @@ export function ParseReview({ base, version, runs, run, current, blocks, pages, 
         </form>
       </details>}
     </div>}
+    </details><p className="pdf-original-link"><OriginalLink base={base} /></p>
     {blocks && current && <EvidenceReview key={run} base={base} run={run} current={current} blocks={blocks} initialPages={pages}
       immutable={sourceReadOnly || (Boolean(blocks.ir_schema_version) && !blocks.milestones?.structured)}
       perform={perform} onChange={onChange} openConfirm={openConfirm} onCorrect={canCorrect ? correctBlock : undefined} />}
@@ -171,14 +174,14 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
   return <>
     <section className="pdf-review-section" aria-labelledby="pdf-milestones-title">
       <h3 id="pdf-milestones-title">技术处理与人工核验</h3>
-      <dl className="pdf-milestones">
+      <details><summary>查看处理与源核验状态</summary><dl className="pdf-milestones">
         <div><dt>原始解析</dt><dd>{blocks.milestones?.parsed || current.artifact_manifest_ref ? "已归档" : modern || current.processing_stage ? "尚未归档" : "无历史记录"}</dd></div>
         <div><dt>归一化</dt><dd>{blocks.milestones?.normalized ? "已对齐原页" : modern ? "未完成" : "尚无原页投影"}</dd></div>
         <div><dt>结构恢复</dt><dd>{blocks.milestones?.structured ? "已恢复" : modern ? "未完成" : "尚无结构投影"}</dd></div>
         <div><dt>源质量检查</dt><dd>{blocks.source_qc ? processingLabel(blocks.source_qc.status, stateLabel(blocks.source_qc.status)) : "尚无检查报告"}</dd></div>
         <div><dt>源人工核验</dt><dd>{sourceVerification?.state === "verified" ? "已核验" :
           sourceVerification?.state === "rejected" ? "已退回" : modern ? "待核验" : "按历史内容核验"}</dd></div>
-      </dl>
+      </dl></details>
       {!!sourceVerification?.reasons.length && <ul className="pdf-review-reasons">
         {sourceVerification.reasons.map(reason => <li key={reason}>{processingLabel(reason, "源核验仍有未解决事项。")}</li>)}
       </ul>}
@@ -202,6 +205,7 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
           {blocks.items.some(block => block.structure_role === "container") &&
             <button className="ghost" aria-pressed={pageNumber === "structure"} onClick={() => setSelection("structure")}>查看文档结构</button>}
         </nav>
+        {typeof pageNumber === "number" && <SourceReader documentId={base.split("/")[2]} versionId={versionId(base)} page={pageNumber} />}
         <div className="pdf-page-content">
           <h4 id="pdf-page-title" tabIndex={-1}>{pageNumber === "structure" ? "文档结构" : `PDF 第 ${pageNumber} 页`}</h4>
           {typeof pageNumber === "number" && <OriginalLink base={base} page={pageNumber} />}
@@ -228,12 +232,12 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
           </div>
         </div>
       </div>}
-    </section> : <div className="blocks">
+    </section> : <div className="legacy-review-grid"><SourceReader documentId={base.split("/")[2]} versionId={versionId(base)} page={1}/><div className="blocks">
       {visibleBlocks.map(block => <BlockReview key={`${block.id}-${block.revision}`} block={block} run={run} base={base}
         immutable={immutable} critical={[]} confirmationMissing={false} onJump={jumpToBlock} children={[]}
         onSave={(choice, reason) => saveBlock(block, choice, reason)} />)}
       {!visibleBlocks.length && <p className="muted">尚无可核验内容块。请刷新查看后台处理进度。</p>}
-    </div>}
+    </div></div>}
   </>;
 
   function saveBlock(block: Block, choice: string, reason: string) {
@@ -244,6 +248,8 @@ function EvidenceReview({ run, base, blocks, current, initialPages, immutable, p
     }, "逐块核验结果已保存。");
   }
 }
+
+function versionId(base: string) { return base.split("/")[4]; }
 
 function sourcePageLabel(page: ParsePage) {
   const basis = page.printed_page_basis;

@@ -153,6 +153,9 @@ def current_session(request: Request, db: Session, config: Settings = settings, 
     now = utc_now()
     if not session or session.revoked_at or _utc(session.expires_at) <= now:
         raise SafeError("AUTH_REQUIRED", "登录状态已失效，请重新登录", 401)
+    workspace_binding = request.headers.get("X-Workspace-CSRF")
+    if workspace_binding is not None and not __import__("hmac").compare_digest(digest_token(workspace_binding), session.csrf_hash):
+        raise SafeError("WORKSPACE_SESSION_CHANGED", "页面登录身份已变化，请重新登录", 401)
     user = db.get(User, session.user_id, populate_existing=True)
     if not user or user.status != "active" or user.authz_revision != session.authz_revision:
         if persist_heartbeat and session.revoked_at is None:

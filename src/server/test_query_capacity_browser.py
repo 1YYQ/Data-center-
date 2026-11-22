@@ -1,4 +1,4 @@
-"""Opt-in desktop acceptance for lazy history and bounded query admission."""
+"""Opt-in task-workbench paging, full queue, recovery and cancellation."""
 import hashlib
 import json
 import os
@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .app import create_app
 from .config import Settings
@@ -77,7 +77,7 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
     output = Path(os.environ.get("DATACENTER_CAPACITY_BROWSER_EVIDENCE", "outputs/pilot-capacity/2026-11-19/browser"))
     output.mkdir(parents=True, exist_ok=True)
     report = {"status": "INCOMPLETE", "scope": "desktop Chrome, production HTTP and fresh migrated SQLite; synthetic employee and query inputs; no worker or model",
-              "max_inflight": CAPACITY, "history_requests": [], "browser_errors": [], "external_page_requests": []}
+              "max_inflight": CAPACITY, "history_requests": [], "execution_requests": [], "browser_errors": [], "external_page_requests": []}
     fresh = tmp_path / "query-capacity.db"
     assert not fresh.exists()
     settings = Settings(database_url="sqlite:///" + fresh.as_posix(), storage_dir=tmp_path / "storage",
@@ -96,7 +96,7 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
                 "--disable-background-networking", "--disable-component-update", "--no-first-run", "--proxy-server=http://127.0.0.1:1"])
             try:
                 report["browser"] = browser.version
-                context = browser.new_context(viewport={"width": 1440, "height": 1000}, service_workers="block")
+                context = browser.new_context(viewport={"width": 1440, "height": 900}, service_workers="block")
                 page = context.new_page()
                 page.on("pageerror", lambda error: report["browser_errors"].append(str(error)))
                 submitted = []
@@ -107,8 +107,10 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
                         return
                     if not request.url.startswith(gateway + "/"):
                         report["external_page_requests"].append(request.url)
-                    elif request.method == "GET" and location.path == "/tasks":
+                    elif request.method == "GET" and location.path == "/workspace-data/works":
                         report["history_requests"].append(parse_qs(location.query))
+                    elif request.method == "GET" and location.path.endswith("/executions"):
+                        report["execution_requests"].append(request.url)
                     elif request.method == "POST" and location.path == "/knowledge/queries":
                         submitted.append(request.url)
 
@@ -120,79 +122,55 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
                 page.get_by_label("账号", exact=True).fill(USERNAME)
                 page.get_by_label("口令", exact=True).fill(PASSWORD)
                 page.get_by_role("button", name="登录", exact=True).click()
-                history = page.locator(".query-panel details")
-                summary = history.locator("summary")
-                expect(summary).to_have_text("我的查询记录")
-                page.wait_for_load_state("networkidle")
-                assert not history.evaluate("details => details.open") and report["history_requests"] == []
-                report["initial_collapsed_history_requests"] = 0
+                table = page.get_by_role("region", name="我的工作", exact=True)
+                expect(table.locator("tbody tr")).to_have_count(10)
+                assert report["history_requests"] and not report["execution_requests"]
+                page.get_by_role("button", name="加载更早工作", exact=True).click()
+                expect(table.locator("tbody tr")).to_have_count(1)
+                assert table.locator("tbody").inner_text().find(names[-1]) >= 0
+                screenshot(page, "01-bounded-work-pages")
 
-                def history_page(button, offset, total_visible):
-                    uri = f"/tasks?limit=5&offset={offset}"
-                    with page.expect_response(lambda response: response.url == gateway + uri) as listed:
-                        button.click()
-                    assert listed.value.status == 200
-                    items = listed.value.json()
-                    expected = names[offset:offset + 5]
-                    assert [entry["input"]["query"] for entry in items["items"]] == expected
-                    assert items["next_offset"] == (offset + 5 if offset + 5 < len(names) else None)
-                    rows = history.locator("ul > li button")
-                    expect(rows).to_have_text(names[:total_visible])
-                    return len(expected)
+                def submit(question):
+                    page.goto(gateway + "/workspace/query?new=1")
+                    page.get_by_label("问题", exact=True).fill(question)
+                    page.get_by_label("设备型号（可选）", exact=True).fill(MODEL)
+                    with page.expect_response(lambda response: response.url.endswith("/knowledge/queries") and response.request.method == "POST") as reply:
+                        page.get_by_role("button", name="提交工作", exact=False).click()
+                    return reply.value
 
-                load_more = history.get_by_role("button", name="加载更多查询记录", exact=True)
-                report["history_page_sizes"] = [history_page(summary, 0, 5), history_page(load_more, 5, 10), history_page(load_more, 10, 11)]
-                expect(load_more).to_have_count(0)
-                report["history_refresh_size"] = history_page(history.get_by_role("button", name="刷新查询记录", exact=True), 0, 5)
-                screenshot(page, "01-history-refresh-first-page")
-                assert report["history_requests"] == [{"limit": ["5"], "offset": [str(offset)]} for offset in (0, 5, 10, 0)]
-                summary.click()
-
-                form = page.locator(".query-panel form").first
-                question = form.locator("textarea")
-                form.get_by_label("设备型号（可选）", exact=True).fill(MODEL)
-                submit = form.get_by_role("button", name="提交查询", exact=True)
-                query_url = gateway + "/knowledge/queries"
-                question.fill("SYNTHETIC fourth query accepted from Chrome")
-                with page.expect_response(lambda response: response.url == query_url and response.request.method == "POST") as first:
-                    submit.click()
-                assert first.value.status == 202 and first.value.json()["status"] == "pending"
-                original_id = first.value.json()["task_id"]
-                expect(page.get_by_text("查询已排队", exact=True)).to_be_visible()
-                expect(page.get_by_text("查询已保存，正在等待执行。关闭或刷新不会重复提交。", exact=True)).to_be_visible()
-                report["queued_acceptance"] = {"status": first.value.status, "task_id": original_id}
-                screenshot(page, "02-pending-queue")
-
-                question.fill("SYNTHETIC fifth query rejected at capacity")
-                with page.expect_response(lambda response: response.url == query_url and response.request.method == "POST") as refused:
-                    submit.click()
-                assert refused.value.status == 429 and refused.value.json()["code"] == "QUERY_CAPACITY_FULL"
-                assert "task_id" not in refused.value.json()
-                expect(page.get_by_text("尚未提交", exact=True)).to_be_visible()
-                expect(page.get_by_text("当前查询较多，本次未创建新任务。请稍后再提交。", exact=True)).to_be_visible()
-                expect(page.get_by_role("button", name="恢复原提交", exact=True)).to_have_count(0)
-                screenshot(page, "03-capacity-rejection-keeps-original")
-                report["capacity_rejection"] = {"status": refused.value.status, "code": refused.value.json()["code"]}
-
-                status_url = gateway + f"/tasks/{original_id}/status"
-                with page.expect_response(lambda response: response.url == status_url) as refreshed:
-                    page.get_by_role("button", name="刷新原查询状态", exact=True).click()
-                assert refreshed.value.json()["id"] == original_id and refreshed.value.json()["status"] == "pending"
-                expect(page.get_by_text("查询已排队", exact=True)).to_be_visible()
-                with page.expect_response(lambda response: response.url == status_url) as reopened:
-                    page.reload()
-                assert reopened.value.json()["id"] == original_id and reopened.value.json()["status"] == "pending"
-                expect(page.get_by_text("查询已排队", exact=True)).to_be_visible()
-                assert not history.evaluate("details => details.open") and len(report["history_requests"]) == 4
+                accepted = submit("SYNTHETIC fourth admitted work")
+                assert accepted.status == 202
+                original_id = accepted.json()["task_id"]
+                expect(page.locator(".badge")).to_have_text("排队中")
+                refused = submit("SYNTHETIC fifth refused work")
+                assert refused.status == 429
+                expect(page.get_by_text("执行未受理", exact=True)).to_be_visible()
+                expect(page.locator(".task-workbench")).to_contain_text("本次执行未受理")
                 assert len(submitted) == 2
-                screenshot(page, "04-reopen-original-pending-task")
-
+                screenshot(page, "02-full-queue-refuses-without-new-task")
                 with app.state.session_factory() as db:
                     saved = list(db.scalars(select(QueryTask).where(QueryTask.owner_user_id == employee_id)))
                     assert len(saved) == len(names) + 1
                     assert {task.id for task in saved if task.status == "pending"} == {*pending, original_id}
-                report["original_reopened"] = {"task_id": original_id, "state": "pending", "browser_submission_count": len(submitted)}
-                report["persisted_pending_count"] = CAPACITY
+
+                page.goto(gateway + "/workspace/query?task=" + original_id)
+                expect(page.locator(".badge")).to_have_text("排队中")
+                page.reload()
+                expect(page.locator(".badge")).to_have_text("排队中")
+                assert len(submitted) == 2
+                screenshot(page, "03-restored-original-work")
+                page.get_by_role("button", name="取消本次执行", exact=True).click()
+                expect(page.locator(".badge")).to_have_text("已取消")
+                with app.state.session_factory() as db:
+                    assert db.get(QueryTask, original_id).status == "cancelled"
+                    assert db.scalar(select(func.count()).select_from(QueryTask).where(QueryTask.status == "pending")) == CAPACITY - 1
+                page.reload()
+                expect(page.locator(".badge")).to_have_text("已取消")
+                assert len(submitted) == 2
+                screenshot(page, "04-server-confirmed-cancellation")
+                report["original_reopened"] = {"task_id": original_id, "state": "cancelled", "browser_submission_count": len(submitted)}
+                report["full_queue_pending_count"] = CAPACITY
+                report["post_cancellation_pending_count"] = CAPACITY - 1
                 assert not report["browser_errors"] and not report["external_page_requests"]
                 report["status"] = "PASS"
                 record_testsuite_property("served_react_bundle", bundle)
@@ -200,4 +178,9 @@ def test_query_capacity_browser_history_and_full_queue(tmp_path, record_testsuit
                 browser.close()
     finally:
         app.state.engine.dispose()
+        # Only this fixture's exact newly created database and SQLite sidecars.
+        for target in (fresh, Path(str(fresh) + "-wal"), Path(str(fresh) + "-shm")):
+            assert target.parent.resolve() == tmp_path.resolve() and target.name.startswith("query-capacity.db")
+            target.unlink(missing_ok=True)
+        report["temporary_sqlite_removed"] = not fresh.exists()
         (output / "observations.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

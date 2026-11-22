@@ -8,7 +8,7 @@
 | PDF处理专项 | 八阶段架构、IR、切分/QC与最小评测的主题规范；实施与真实验证状态统一从STATUS进入 | [SPEC10](requirements/SPEC.md#10-pdf-文档处理架构-spec2026-11-18待审核)、[IR数据契约](database/数据库设计.md#22-document-ir-数据契约候选01)、[MinerU固定版本审计](architecture/模型与解析方案.md#11-mineru-版本能力与输出契约审计)、[实施依赖](../specs/001-device-operation-maintenance-query/tasks.md#pdf-processing-实施任务p0p6) |
 | `roles/` | 各角色职责、可见范围与权限边界 | [普通使用者](roles/普通使用者.md)、[知识管理员](roles/知识管理员.md)、[系统管理员](roles/系统管理员.md) |
 | `architecture/` | 技术选型、组件职责与迁移设计 | [前后端技术方案](architecture/前后端技术方案.md)、[模型与解析方案](architecture/模型与解析方案.md)、[Pi接入与改造](architecture/Pi-Agent接入与改造方案.md) |
-| `design/` | 界面候选与角色对接 | [全新任务工作台设计](design/任务工作台全新设计.md)（当前视觉候选）；既有对接资料：[普通使用者](design/普通使用者界面与对接方案.md)、[知识管理员](design/知识管理员界面与对接方案.md)、[系统管理员](design/系统管理员界面与对接方案.md)，旧视觉编排不作为新稿基线 |
+| `design/` | 界面候选与角色对接 | [全新任务工作台设计](design/任务工作台全新设计.md)（已获准本地实施的当前设计）；既有对接资料：[普通使用者](design/普通使用者界面与对接方案.md)、[知识管理员](design/知识管理员界面与对接方案.md)、[系统管理员](design/系统管理员界面与对接方案.md)，旧视觉编排不作为新稿基线 |
 | `database/` | 表结构、关系、约束与数据生命周期 | [数据库设计](database/数据库设计.md) |
 | `api/` | 端点、请求响应、权限与异步契约 | [接口设计](api/接口设计.md) |
 | `planning/` | 项目状态、实施顺序与业务前置条件 | [STATUS.md](planning/STATUS.md)、[PLAN.md](planning/PLAN.md)、[开工前待确定项](planning/开工前待确定项.md) |

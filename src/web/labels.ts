@@ -1,6 +1,7 @@
 const labels: Record<string, string> = {
   RETENTION_POLICY_UNCONFIGURED: "保留策略尚未配置", PERMANENT_PURGE_NOT_AVAILABLE: "当前不提供永久清理", missing: "缺失",
   draft: "草稿", effective: "当前发布版", superseded: "历史发布版", withdrawn: "已撤回",
+  waiting_input: "等待补充", cancelled: "已取消", reconciliation_required: "结果待核对",
   pending: "待处理", running: "处理中", succeeded: "处理成功", needs_review: "待核验", failed: "处理失败", blocked: "受阻", ready: "已就绪", stale: "已过期，须重建", active: "已启用", not_ready: "尚未就绪", empty: "尚无可用索引", building: "构建中",
   requires_rebuild: "须重建索引", requires_rebuild_after_publication: "发布后须重建索引",
   applicable: "适用", not_applicable: "不适用", accepted: "关键内容已确认", rejected: "不接受", classified: "分类已确认", conflict: "存在冲突",
