@@ -24,6 +24,9 @@ _IDENT = r"[A-Z]?[0-9]{1,5}(?:[.-][0-9]{1,4})*"
 _LABEL_END = r"(?![A-Za-z0-9]|[.-][0-9])"
 _FIGURE = re.compile(rf"^\s*(?:图\s*|Fig(?:ure)?\.?\s+)(?P<label>{_IDENT}){_LABEL_END}", re.I)
 _FIGURE_REF = re.compile(rf"(?:见图\s*|\b(?:see|refer to)\s+fig(?:ure)?\.?\s+)(?P<label>{_IDENT}){_LABEL_END}", re.I)
+_DIRECT_FIGURE_REF = re.compile(rf"(?:\bas (?:shown|depicted) in |(?P<paren>\())"
+                                rf"(?P<reference>Fig(?:ure)?\.?\s+(?P<label>{_IDENT})){_LABEL_END}(?(paren)\))\.?\s*$", re.I)
+_DIRECT_FIGURE_ACTION = re.compile(r"^\s*(?:[-–•]\s*)?(?:set up|position|insert|place|displace|shift|move|measure)\b", re.I)
 _TABLE = re.compile(rf"^\s*(?:表\s*|Table\s+)(?P<label>{_IDENT}){_LABEL_END}", re.I)
 _TABLE_CONT = re.compile(r"^\s*(?:[（(]\s*(?:续|continued)\s*[）)]|续表\b|continued\b)", re.I)
 _ACTION = re.compile(r"按(?:下|住|动)|开启|打开|关闭|切换|\b(?:press|hold|open|close|switch)\b", re.I)
@@ -36,6 +39,10 @@ _FORMULA_SOURCE = re.compile(
     rf"^\s*(?:公式\s*|(?:equation|formula)\s+)[（(]?(?P<label>{_IDENT})[）)]?\s*"
     rf"(?:(?:中[，,]?\s*|[,，]\s*|where\s+)(?P<symbol>{_SYMBOL})\s*(?:表示|为|denotes\b|means\b)\s*\S|"
     rf"(?P<condition>适用条件\s*[:：]|(?:applies|valid)\s+(?:only\s+)?when\b)\s*\S)", re.I)
+_PRINTED_INDEX = re.compile(r"([A-Za-z])([₀-₉]{1,3})")
+_JOINT_DEFINITION = re.compile(r"^\s*(?P<symbols>[A-Za-z][₀-₉]{1,3}(?:\s*,\s*[A-Za-z][₀-₉]{1,3})+)\s*:\s*\S")
+_SUBSCRIPT_DIGITS = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
+_FORMULA_OUTPUT = re.compile(r"\b(?:the )?following (?:equation|relationship) for (?:the )?[a-z][a-z -]{1,58}:\s*$", re.I)
 _NUMBER = r"[+\-−]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+\-−]?\d+)?"
 _UNITS = r"°\s*[CF]|℃|℉|%|(?:[kMGTµμmcd]?(?:Pa|Hz|[mgsAVWLJ]))(?:[²³]|\^[23])?(?:\s*/\s*(?:s|min|h|[mL]))?|rpm|min|bar|ohm|Ω|K|N|h"
 _PARAMETER = re.compile(
@@ -44,6 +51,10 @@ _PARAMETER = re.compile(
     r"(?P<suffix>[^\r\n;；]*)(?=$|[;；])", re.M)
 _UNIT = re.compile(rf"[ \t]*(?P<unit>{_UNITS})(?=[ \t]*(?:$|[。.;；,，]|[（(]))")
 _PARAMETER_PREFIX = re.compile(r"^(?:步骤|Step\b|图(?:\s|\d)|表(?:\s|\d)|Fig(?:ure)?\b|Table\b|公式|Equation\b)", re.I)
+_INLINE_ASSIGNMENT = re.compile(rf"\b(?P<name>[A-Za-z])\s*=\s*(?P<value>{_NUMBER})[ \t]*(?P<unit>{_UNITS})"
+                                r"(?![A-Za-z0-9µμ²³^]|[ \t]*/)")
+_CATALOG_LINE = re.compile(r"^\s*[1-9][0-9]*\s+(?P<name>[^,\r\n]+),\s*(?P<quantities>.*?)\.{2,}\s*\d+(?:\s+\d+)*\s*$")
+_CATALOG_QUANTITY = re.compile(rf"(?P<value>{_NUMBER})[ \t]*(?P<unit>{_UNITS})(?=\s*(?:/|$))")
 _SOURCE_CLAUSE = re.compile(r"[^。！？；;\r\n]+(?:[。！？；;]|$)?")
 
 
@@ -56,11 +67,31 @@ def _field(block: dict, name: str) -> dict:
     return {**ref, "json_pointer": f"{ref['json_pointer']}/{name}"}
 
 
+def direct_figure_reference(text: str):
+    if not _DIRECT_FIGURE_ACTION.match(text) or not (reference := _DIRECT_FIGURE_REF.search(text)):
+        return None
+    # The imperative and the label must be in the same source sentence.
+    if re.search(r"[!?;\r\n]|\.\s", text[:reference.start()]):
+        return None
+    return reference
+
+
 def _symbol_value(raw: str) -> str | None:
     if styled := _STYLED_SYMBOL.fullmatch(raw):
         letter, sub = styled.group("letter", "sub")
         return f"{letter}_{{{sub}}}" if sub else letter
     return raw if re.fullmatch(_SYMBOL, raw) else None
+
+
+def adjacent_definition_symbols(text: str, expression: str, source_offset: int) -> tuple[str, ...]:
+    if source_offset == -1 and _FORMULA_OUTPUT.search(text) and expression.count("=") == 1:
+        symbol = _symbol_value(expression.split("=", 1)[0].strip())
+        return (symbol,) if symbol else ()
+    if source_offset == 1 and (joint := _JOINT_DEFINITION.match(text)):
+        symbols = tuple(f"{match[1]}_{{{match[2].translate(_SUBSCRIPT_DIGITS)}}}"
+                        for match in _PRINTED_INDEX.finditer(joint["symbols"]))
+        return symbols if len(set(symbols)) == len(symbols) else ()
+    return ()
 
 
 def _formula_ranges(expression: str) -> dict | None:
@@ -427,6 +458,7 @@ class _Recovery:
     def formula_relations(self) -> None:
         formulas = defaultdict(list)
         required_symbols = {}
+        by_order = {}
         for block in self.source:
             if block["kind"] != "formula":
                 continue
@@ -446,12 +478,25 @@ class _Recovery:
             structured["formula_symbols"] = [{"symbol": symbol, "raw_ref": raw_formula, "ranges": ranges}
                                              for symbol, ranges in occurrences.items()]
             required_symbols[block["id"]] = {symbol: f"/formula_symbols/{index}" for index, symbol in enumerate(occurrences)}
+            if block["reading_order"] is not None:
+                by_order[block["reading_order"]] = block
         definitions: dict = defaultdict(list)
         conditions: dict = defaultdict(list)
         for block in self.source:
             if block["kind"] not in {"paragraph", "footnote"}:
                 continue
             text = block["text_content"]
+            order = block["reading_order"]
+            if order is not None:
+                for offset in (-1, 1):
+                    target = by_order.get(order - offset)
+                    if not target or target["file_page"] != block["file_page"] or self.scope(target) != self.scope(block):
+                        continue
+                    symbols = adjacent_definition_symbols(text, target["structured_content"]["latex_raw"], offset)
+                    if (symbols and set(symbols) <= required_symbols[target["id"]].keys()
+                            and (part := self.source_part(block, "variable_definition", (0, len(text))))):
+                        for symbol in symbols:
+                            definitions[(target["id"], symbol)].append((block, part, "adjacent_printed_formula_definition"))
             if not (match := _FORMULA_SOURCE.match(text)):
                 continue
             targets = formulas.get((self.scope(block)["section_id"], match["label"].casefold()), [])
@@ -465,7 +510,7 @@ class _Recovery:
                 self.issue("STRUCTURE_FORMULA_TARGET_UNRESOLVED", block)
                 continue
             if symbol:
-                definitions[(target["id"], symbol)].append((block, part))
+                definitions[(target["id"], symbol)].append((block, part, "explicit_equation_label_and_symbol"))
             else:
                 conditions[target["id"]].append((block, part))
         for block in self.source:
@@ -478,9 +523,12 @@ class _Recovery:
                 if len(candidates) != 1:
                     self.issue("STRUCTURE_FORMULA_DEFINITION_UNRESOLVED", block, symbol=symbol)
                     continue
-                source, part = candidates[0]
-                self.relation("defines", source, block, "explicit_equation_label_and_symbol", from_part=part, to_part=symbol_part,
-                              scope=self.scope(block, symbol=symbol), evidence=[source["raw_ref"], block["raw_ref"]])
+                source, part, rule = candidates[0]
+                evidence = [source["raw_ref"], block["raw_ref"]]
+                if correction := source["structured_content"].get("manual_correction", {}).get("text_source_ref"):
+                    evidence.append(correction)
+                self.relation("defines", source, block, rule, from_part=part, to_part=symbol_part,
+                              scope=self.scope(block, symbol=symbol), evidence=evidence)
                 if source["id"] not in structured["definition_refs"]:
                     structured["definition_refs"].append(source["id"])
             applicable = conditions.get(block["id"], [])
@@ -496,19 +544,41 @@ class _Recovery:
         for block in self.source:
             if block["kind"] not in {"paragraph", "step", "warning"}:
                 continue
-            for match in _PARAMETER.finditer(block["text_content"]):
+            text = block["text_content"]
+            assignments = {}
+            for match in _PARAMETER.finditer(text):
                 if _PARAMETER_PREFIX.match(match["name"]):
                     continue
                 if unit_match := _UNIT.match(match["suffix"]):
-                    name = self.source_part(block, "parameter", match.span("name"))
-                    value = self.source_part(block, "parameter_value", match.span("value"))
                     unit_bounds = tuple(match.start("suffix") + position for position in unit_match.span("unit"))
-                    unit = self.source_part(block, "parameter_unit", unit_bounds)
-                    if name and value and unit:
-                        self.relation("unit_of", block, block, "explicit_parameter_assignment", from_part=unit, to_part=value,
-                                      scope=self.scope(block, parameter_part=name), evidence=[block["raw_ref"]])
+                    if self.parameter_relation(block, match.span("name"), match.span("value"), unit_bounds):
+                        assignments[match.span("value")] = True
                         continue
-                self.issue("STRUCTURE_PARAMETER_UNIT_UNRESOLVED", block, block_range=list(match.span("value")))
+                assignments[match.span("value")] = False
+            for match in _INLINE_ASSIGNMENT.finditer(text):
+                value = match.span("value")
+                if value not in assignments or not assignments[value]:
+                    assignments[value] = self.parameter_relation(block, match.span("name"), value, match.span("unit"))
+            parent = self.by_id.get(block["parent_block_id"], {})
+            if parent.get("kind") in {"index", "list"} and (item := _CATALOG_LINE.fullmatch(text)) and "=" not in item["name"]:
+                quantities = list(_CATALOG_QUANTITY.finditer(item["quantities"]))
+                if quantities and "/".join(match[0] for match in quantities).replace(" ", "") == item["quantities"].replace(" ", ""):
+                    for match in quantities:
+                        value, unit = (tuple(pos + item.start("quantities") for pos in match.span(key)) for key in ("value", "unit"))
+                        self.parameter_relation(block, item.span("name"), value, unit)
+            for value, resolved in assignments.items():
+                if not resolved:
+                    self.issue("STRUCTURE_PARAMETER_UNIT_UNRESOLVED", block, block_range=list(value))
+
+    def parameter_relation(self, block, name_bounds, value_bounds, unit_bounds) -> bool:
+        name = self.source_part(block, "parameter", name_bounds)
+        value = self.source_part(block, "parameter_value", value_bounds)
+        unit = self.source_part(block, "parameter_unit", unit_bounds)
+        if not (name and value and unit):
+            return False
+        self.relation("unit_of", block, block, "explicit_parameter_assignment", from_part=unit, to_part=value,
+                      scope=self.scope(block, parameter_part=name), evidence=[block["raw_ref"]])
+        return True
 
     def tables(self) -> None:
         for block in self.source:
@@ -602,6 +672,7 @@ class _Recovery:
 
     def figures(self) -> None:
         labels: dict = defaultdict(list)
+        page_labels: dict = defaultdict(list)
         visual_ids = set()
         linked_action_ids = set()
         for group in self.source:
@@ -639,9 +710,25 @@ class _Recovery:
                 if match := _FIGURE.match(caption["text_content"]):
                     scope = self.scope(body)
                     labels[(scope["section_id"], match["label"].casefold())].append((body, caption))
+                    page_labels[(body["file_page"], match["label"].casefold())].append((body, caption))
         for block in self.source:
             step = block["structured_content"].get("step")
             if not step:
+                if block["kind"] != "paragraph" or block["reading_order"] is None:
+                    continue
+                reference = direct_figure_reference(block["text_content"])
+                if reference is None:
+                    continue
+                sources = page_labels[(block["file_page"], reference["label"].casefold())]
+                part = self.source_part(block, "figure_reference", reference.span("reference"))
+                if len(sources) != 1 or not part:
+                    self.issue("STRUCTURE_FIGURE_TARGET_UNRESOLVED", block)
+                    continue
+                body, caption = sources[0]
+                self.relation("refers_to", block, body, "same_page_explicit_figure_reference", from_part=part,
+                    scope={"document_root_id": self.root["id"], "file_page": block["file_page"]},
+                    evidence=[block["raw_ref"], caption["raw_ref"], body["raw_ref"]])
+                linked_action_ids.add(body["id"])
                 continue
             text = block["text_content"]
             for match in _FIGURE_REF.finditer(text):

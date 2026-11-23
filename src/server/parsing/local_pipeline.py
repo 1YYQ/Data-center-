@@ -33,6 +33,44 @@ def fingerprint(value: dict) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
 
 
+def _display_geometry(page, rect, *, clip=True, stroke_width=0):
+    import pymupdf
+
+    box = pymupdf.Rect(rect)
+    if not all(math.isfinite(value) for value in box):
+        return {"bbox": None, "geometry_status": "page_only"}
+    # Horizontal and vertical centerlines can have zero area while their
+    # visible, positive-width strokes occupy a real source region.
+    if (box.width == 0) != (box.height == 0) and stroke_width > 0:
+        half = stroke_width / 2
+        box += (-half, -half, half, half)
+    box = box * page.rotation_matrix
+    if clip:
+        box &= page.rect
+    if box.is_empty or not page.rect.contains(box):
+        return {"bbox": None, "geometry_status": "page_only"}
+    return {"bbox": [box.x0 / page.rect.width, box.y0 / page.rect.height,
+                     box.x1 / page.rect.width, box.y1 / page.rect.height], "geometry_status": "exact"}
+
+
+def _native_text_lines(page):
+    import pymupdf
+
+    document = page.get_text("dict", flags=pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_PRESERVE_IMAGES)
+    for block in document["blocks"]:
+        for line in block.get("lines", []):
+            text = "".join(span["text"] for span in line["spans"]).strip()
+            if text and (geometry := _display_geometry(page, line["bbox"], clip=False))["bbox"]:
+                yield {"text": text, "bbox": geometry["bbox"]}
+
+
+def _vector_geometry(page, drawing):
+    width = drawing.get("width")
+    stroke = (type(width) in {float, int} and math.isfinite(width) and 0 < width
+              and drawing.get("type") in {"s", "fs"} and bool(drawing.get("stroke_opacity")))
+    return _display_geometry(page, drawing["rect"], stroke_width=width if stroke else 0)
+
+
 def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbeat=None) -> dict:
     try:
         import pymupdf
@@ -54,7 +92,7 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
                     heartbeat()
                     last_heartbeat = time.monotonic()
                 text = page.get_text("text").strip()
-                images, drawings = len(page.get_images(full=True)), len(page.get_drawings())
+                images, drawings = len(page.get_images(full=True)), page.get_drawings()
                 native = any(char.isalnum() for char in text)
                 visual = bool(images or drawings)
                 page_class = "mixed" if native and visual else "native" if native else "scan" if images else "unknown"
@@ -64,17 +102,10 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
                 except (IndexError, KeyError, TypeError, ValueError, RuntimeError):
                     label = ""
                 label_basis = {"kind": "pdf_page_labels", "label": label} if label and label.isprintable() and len(label) <= 128 else None
-                def candidate_box(rect):
-                    box = pymupdf.Rect(rect) * page.rotation_matrix
-                    box = box & page.rect
-                    if box.is_empty or not all(math.isfinite(value) for value in box):
-                        return {"bbox": None, "geometry_status": "page_only"}
-                    return {"bbox": [box.x0 / page.rect.width, box.y0 / page.rect.height,
-                                     box.x1 / page.rect.width, box.y1 / page.rect.height], "geometry_status": "exact"}
                 image_candidates = [{"id": f"native-image-{index + 1}-{number}", "source_index": number,
-                    **candidate_box(image["bbox"])} for number, image in enumerate(page.get_image_info(xrefs=True))]
+                    **_display_geometry(page, image["bbox"])} for number, image in enumerate(page.get_image_info(xrefs=True))]
                 vector_candidates = [{"id": f"native-vector-{index + 1}-{number}", "source_index": number,
-                    **candidate_box(drawing["rect"])} for number, drawing in enumerate(page.get_drawings())]
+                    **_vector_geometry(page, drawing)} for number, drawing in enumerate(drawings)]
                 unit_type, raw_unit = pdf.xref_get_key(page.xref, "UserUnit")
                 user_unit = 1.0 if unit_type == "null" else float(raw_unit)
                 if not math.isfinite(user_unit) or user_unit <= 0:
@@ -84,9 +115,10 @@ def source_preflight(path: Path, expected_hash: str, expected_size: int, heartbe
                     "width_pt": page.rect.width, "height_pt": page.rect.height, "printed_page": None,
                     "printed_page_basis": label_basis, "page_class": page_class,
                     "state": "blank" if blank else "pending", "native_text": text,
-                    "coverage": {"native_text_present": native, "image_candidates": image_candidates,
+                    "coverage": {"native_text_present": native, "native_text_lines": list(_native_text_lines(page)) if native else [],
+                        "image_candidates": image_candidates,
                         "vector_candidates": vector_candidates,
-                        "image_candidate_count": images, "vector_candidate_count": drawings,
+                        "image_candidate_count": images, "vector_candidate_count": len(drawings),
                         "blank_basis": "no_text_images_or_drawings" if blank else None},
                     "issue_refs": [], "transforms": {"display_space": "rotated_crop_box", "provider_space": "display_normalized"}})
         return {"schema": "dc.pdf-preflight", "schema_version": "1", "source_sha256": expected_hash,

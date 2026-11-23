@@ -52,6 +52,41 @@ def test_styled_equation_symbols_keep_original_ranges_and_exclude_tag():
     assert not formula["structured_content"]["condition_refs"]
 
 
+def test_only_adjacent_printed_joint_definition_binds_to_same_section_formula():
+    normal, _ = _source([_node(r"f = (x_{1} - x_{2}) / s", "equation", equation_label="(1)"),
+                         _node("x₁, x₂: lens position 1 and 2 for sharp images"),
+                         _node("s: distance between screen and lamp")])
+    structured = recover_structure(normal)
+    defined = {r["basis"]["scope"]["symbol"] for r in structured["relations"] if r["relation_type"] == "defines"}
+    assert defined == {"x_{1}", "x_{2}"}
+    assert any(issue["code"] == "STRUCTURE_FORMULA_CONDITION_UNRESOLVED" for issue in structured["issues"])
+
+
+def test_unnumbered_figure_reference_requires_explicit_action_and_unique_same_page_target():
+    normal, _ = _source([_node("Set up the lamp as depicted in Fig. 1."),
+                         _node("Move the clamp towards the object (Fig. 2)."),
+                         _node("The summary also mentions Fig. 3."),
+                         _figure("Fig. 1: bench"), _figure("Fig. 2: slide"), _figure("Fig. 2: duplicate")],
+                         [_figure("Fig. 3: screen")], assets={"images/figure.png": str(uuid4())})
+    structured = recover_structure(normal)
+    links = [r for r in structured["relations"] if r["relation_type"] == "refers_to"]
+    by_id = {block["id"]: block for block in structured["blocks"]}
+    assert len(links) == 1
+    assert _relation_part(links[0], "from", by_id)["text"] == "Fig. 1"
+    assert links[0]["basis"]["scope"]["file_page"] == 1
+
+
+def test_inline_unit_preserves_assignment_and_rejects_unknown_compound():
+    normal, _ = _source([_node("Position the lens f = +100 mm in the holder."),
+                         _node("Position the sensor x = 3 m/quux at the axis.")])
+    structured = recover_structure(normal)
+    links = [r for r in structured["relations"] if r["relation_type"] == "unit_of"]
+    by_id = {block["id"]: block for block in structured["blocks"]}
+    assert len(links) == 1
+    assert _relation_part(links[0], "from", by_id)["text"] == "mm"
+    assert _relation_part(links[0], "to", by_id)["text"] == "+100"
+
+
 def test_structure_preserves_source_and_recovers_five_relationship_families():
     normal, source = _source([
         _node("操作步骤", "doc_title", level=1),

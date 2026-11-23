@@ -437,11 +437,17 @@ def _region(node: dict, page: dict, provider_page: dict) -> dict:
     return result
 
 
+def native_line_key(text: str) -> str:
+    """Match list text while ignoring layout whitespace and dot leaders."""
+    return re.sub(r"\.{2,}|\s+", "", text)
+
+
 class _Normalizer:
     def __init__(self, run_id: str, version_id: str, source_file_id: str, source_sha256: str,
-                 raw_artifact_id: str, asset_refs: dict) -> None:
+                 raw_artifact_id: str, asset_refs: dict, preflight_artifact_id: str | None) -> None:
         self.run_id = run_id
         self.raw_artifact_id = raw_artifact_id
+        self.preflight_artifact_id = preflight_artifact_id
         self.locator_identity = {"schema_version": "dc.source-locator.v1", "parse_run_id": run_id,
                                  "document_version_id": version_id, "source_file_id": source_file_id,
                                  "source_sha256": source_sha256}
@@ -452,6 +458,21 @@ class _Normalizer:
 
     def ref(self, pointer: str) -> dict:
         return _raw_ref(self.raw_artifact_id, pointer)
+
+    def locate_list_line(self, block: dict, page: dict) -> bool:
+        region = block["locator"]["regions"][0]
+        key = native_line_key(block["text_content"])
+        if not self.preflight_artifact_id or len(key) < 8:
+            return False
+        matches = [(index, line) for index, line in enumerate(page.get("coverage", {}).get("native_text_lines", []))
+                   if native_line_key(line["text"]) == key and normalized_bbox(line["bbox"])]
+        if len(matches) != 1:
+            return False
+        index, line = matches[0]
+        region.update(geometry_status="exact", bbox_normalized=deepcopy(line["bbox"]), geometry_basis="native_text_line",
+                      geometry_evidence_ref={"artifact_id": self.preflight_artifact_id,
+                          "json_pointer": f"/pages/{page['file_page'] - 1}/coverage/native_text_lines/{index}"})
+        return True
 
     def issue(self, code: str, raw_ref: dict | None, page: dict, block_id: str | None = None) -> None:
         issue = {"id": f"issue-{len(self.issues) + 1}", "code": code, "file_page": page["file_page"]}
@@ -487,7 +508,8 @@ class _Normalizer:
                                  "raw_member_name": member}
         return asset_id
 
-    def block(self, node: dict, pointer: str, page: dict, provider_page: dict, parent=None, depth=0) -> dict:
+    def block(self, node: dict, pointer: str, page: dict, provider_page: dict, parent=None, depth=0,
+              parent_kind=None) -> dict:
         if depth > 64 or not isinstance(node, dict) or not isinstance(node.get("type"), str):
             raise ParseContractError("PARSE_CONTRACT_UNSUPPORTED")
         raw_ref = self.ref(pointer)
@@ -516,12 +538,15 @@ class _Normalizer:
             excluded.add("bbox")
         structured: dict = {"provider_type": provider_type}
         out = _Text()
+        recover_list_region = (region["geometry_status"] != "exact" and parent_kind in {"index", "list"}
+                               and kind == "paragraph" and bool(page.get("coverage", {}).get("native_text_lines")))
         if container:
             children = []
             if isinstance(content, list):
                 excluded.add("content")
                 for index, child in enumerate(content):
-                    children.append(self.block(child, f"{pointer}/content/{index}", page, provider_page, block_id, depth + 1))
+                    children.append(self.block(child, f"{pointer}/content/{index}", page, provider_page, block_id,
+                                               depth + 1, kind))
             else:
                 report("IR_CONTAINER_CONTENT_UNSUPPORTED", raw_ref)
             structured["child_refs"] = [child["id"] for child in children]
@@ -534,7 +559,7 @@ class _Normalizer:
                 if sum(child["provider_type"] in body_types for child in children) != 1:
                     report("IR_CONTAINER_BODY_UNSUPPORTED", raw_ref)
         else:
-            if region["geometry_status"] != "exact":
+            if region["geometry_status"] != "exact" and not recover_list_region:
                 report("SOURCE_LOCATOR_MISSING", raw_ref)
             if kind == "unknown":
                 report("IR_PROVIDER_TYPE_UNKNOWN", raw_ref)
@@ -548,6 +573,8 @@ class _Normalizer:
         if kind in {"image", "chart"} and not asset_parts:
             report("IR_VISUAL_RESOURCE_UNAVAILABLE", raw_ref)
         block["text_content"] = out.finish(structured)
+        if recover_list_region and not self.locate_list_line(block, page):
+            report("SOURCE_LOCATOR_MISSING", raw_ref)
         block["structured_content"] = structured
         block["provider_fields"] = _fields(node, excluded, raw_ref)
         block["content_hash"] = fingerprint({key: block[key] for key in (
@@ -672,7 +699,8 @@ def normalize_ir(*, run_id, version_id, source_file_id, source_sha256, profile, 
     if (not isinstance(requested, list) or any(type(value) is not int or not 1 <= value <= count for value in requested)
             or len(set(requested)) != len(requested) or not provider_by_page.keys() <= set(requested)):
         raise ParseContractError("PARSE_PAGE_COVERAGE_INCOMPLETE")
-    normalizer = _Normalizer(str(run_id), str(version_id), str(source_file_id), source_sha256, str(raw_artifact_id), asset_refs or {})
+    normalizer = _Normalizer(str(run_id), str(version_id), str(source_file_id), source_sha256,
+                             str(raw_artifact_id), asset_refs or {}, preflight_artifact_id)
     layout_by_page = _layout_pages(extensions, count)
     pages = []
     requested = set(requested)

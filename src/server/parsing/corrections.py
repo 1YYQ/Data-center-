@@ -13,6 +13,7 @@ from .local_pipeline import ParseContractError, fingerprint
 _EDIT_FIELDS = {"block_id", "ordinal", "text", "kind", "locator", "reason", "basis", "column_headers"}
 _EDITABLE = {"paragraph", "title", "step", "warning", "header", "footer", "footnote", "caption",
              "ref_text", "aside_text", "page_number"}
+_VISUALS = {"image", "chart"}
 _PROMOTIONS = {"paragraph": {"step", "warning"}, "ref_text": {"step", "warning"}, "aside_text": {"warning"},
                "footnote": {"caption"}}
 _IDENTITY = ("document_version_id", "source_file_id", "source_sha256", "profile", "actual_profile", "raw_contract", "page_count")
@@ -201,7 +202,7 @@ def _with_inherited_block(block, parent, index, parent_run_id, mapping, normaliz
     if (not isinstance(request, dict) or not isinstance(request.get("artifact_id"), str)
             or not isinstance(request.get("json_pointer"), str) or not isinstance(regions, list)
             or manual.get("requires_source_review") is not True or not isinstance(parent.get("text_content"), str)
-            or not isinstance(parent.get("kind"), str) or parent["kind"] not in _EDITABLE | {"table"}):
+            or not isinstance(parent.get("kind"), str) or parent["kind"] not in _EDITABLE | _VISUALS | {"table"}):
         raise ParseContractError("IR_CORRECTION_INHERITANCE_INVALID")
     # The previous generation's direct-parent pointer remains in that frozen
     # IR. This generation links to its own alias of the direct parent instead.
@@ -354,7 +355,9 @@ def apply_manual_corrections(normalized_child: dict, *, parent_ir: dict, correct
         if ((original_kind == "table") != header_edit
                 or header_edit and {"text", "kind", "locator"}.intersection(edit)):
             raise ParseContractError("IR_CORRECTION_TABLE_UNSUPPORTED")
-        if (parent.get("structure_role") != "leaf" or not isinstance(original_kind, str) or original_kind not in _EDITABLE | {"table"}
+        visual_region_edit = original_kind in _VISUALS and "locator" in edit and not {"text", "kind"}.intersection(edit)
+        if (parent.get("structure_role") != "leaf" or not isinstance(original_kind, str)
+                or (original_kind not in _EDITABLE | {"table"} and not visual_region_edit)
                 or parent.get("source_kind") not in {"parser", "manual"}):
             raise ParseContractError("IR_CORRECTION_TARGET_UNSUPPORTED")
         node = _bound_to_original(parent, parent_ir)

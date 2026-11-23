@@ -7,10 +7,11 @@ from math import isfinite
 import re
 import unicodedata
 
-from .ir import RAW_MEMBER, RENDERER
+from .ir import RAW_MEMBER, RENDERER, native_line_key
 from .local_pdf import normalized_bbox
 from .local_pipeline import ParseContractError, _member_name, fingerprint
-from .structure import RECOVERY_VERSION, _part_value, _symbol_value
+from .structure import (RECOVERY_VERSION, _FIGURE, _part_value, _symbol_value, adjacent_definition_symbols,
+                        direct_figure_reference)
 
 
 CHECKER_REVISION = "dc.pdf-source-qc/1"
@@ -32,6 +33,7 @@ _STEP_WORD = re.compile(r"(?:^|[\n。；])\s*(?:步骤\s*\d+\s*[:：、.]|step\s
 _WARNING_WORD = re.compile(r"(?:^|[\s\n。；])(?:警告|危险|小心|注意|warning|caution|danger)\s*[:：]|"
                            r"步骤\s*\d+\s*警告|\bwarning\s+for\s+step\b", re.I)
 _NUMBER_WORD = re.compile(r"[+−-]?\d+(?:[.,]\d+)?")
+_DIAGRAM_LABEL = re.compile(r"[A-Za-zα-ωΑ-Ω][0-9₀-₉]{0,2}")
 
 
 def _digest(value) -> bool:
@@ -311,12 +313,31 @@ class _QC:
             elif role != "container":
                 if any(not self.region(region, page) for region in regions):
                     self.issue("sources", "QC_REGION_INVALID", failed=True, block_id=identifier)
+                elif any(region.get("geometry_basis") == "native_text_line" and not self.native_locator(region, block)
+                         for region in regions):
+                    self.issue("sources", "QC_NATIVE_LINE_BINDING_INVALID", failed=True, block_id=identifier)
                 if role == "leaf" and not any(isinstance(region, dict) and region.get("geometry_status") == "exact" for region in regions):
                     if self.critical[identifier]:
                         self.issue("sources", "QC_CRITICAL_REGION_UNRESOLVED", block_id=identifier, tags=self.critical[identifier])
                     else:
                         self.issue("sources", "QC_LEAF_REGION_UNRESOLVED", block_id=identifier)
             self.block_assets(identifier, block)
+
+    def native_lines(self, number):
+        page = self.pages.get(number, {})
+        preflight = next((identifier for identifier, ref in self.artifacts.items() if ref["kind"] == "preflight"), None)
+        if preflight is None:
+            return
+        for index, line in enumerate(page.get("coverage", {}).get("native_text_lines", [])):
+            if isinstance(line, dict) and isinstance(line.get("text"), str) and normalized_bbox(line.get("bbox")):
+                yield line, {"artifact_id": preflight, "json_pointer": f"/pages/{number - 1}/coverage/native_text_lines/{index}"}
+
+    def native_locator(self, region, block) -> bool:
+        key = native_line_key(block["text_content"])
+        matches = [(line, ref) for line, ref in self.native_lines(block["file_page"]) if native_line_key(line["text"]) == key]
+        return (block["kind"] == "paragraph" and len(key) >= 8 and len(matches) == 1
+                and matches[0][0]["bbox"] == region.get("bbox_normalized")
+                and matches[0][1] == region.get("geometry_evidence_ref"))
 
     def region(self, region, page) -> bool:
         if not isinstance(region, dict) or region.get("file_page") != page:
@@ -498,6 +519,17 @@ class _QC:
             return (left["kind"] == "caption" and right["kind"] in {"table", "image", "chart", "code", "algorithm"}
                     and "visual_group_id" in scope)
         if kind == "defines":
+            if basis["rule"] == "adjacent_printed_formula_definition":
+                source_order, formula_order = left.get("reading_order"), right.get("reading_order")
+                expression = right["structured_content"].get("latex_raw")
+                receipt = left["structured_content"].get("manual_correction", {}).get("text_source_ref")
+                if (left["file_page"] != right["file_page"] or "section_id" not in scope
+                        or type(source_order) is not int or type(formula_order) is not int
+                        or not isinstance(expression, str) or scope.get("symbol") not in adjacent_definition_symbols(
+                            left["text_content"], expression, source_order - formula_order)
+                        or not isinstance(a, dict) or a.get("text") != left["text_content"]
+                        or (receipt is not None and receipt not in evidence)):
+                    return False
             return (right["kind"] == "formula" and isinstance(a, dict) and a.get("role") == "variable_definition"
                     and isinstance(b, dict) and b.get("symbol") == scope.get("symbol") and isinstance(b.get("symbol"), str)
                     and target.startswith("/formula_symbols/") and self.symbol_ranges(right, b))
@@ -529,11 +561,33 @@ class _QC:
             return (left["structure_role"] == "observation" and right["structure_role"] == "leaf"
                     and left.get("file_page") == right.get("file_page"))
         if right["kind"] in {"image", "chart"}:
+            if basis["rule"] == "same_page_explicit_figure_reference":
+                return self.direct_figure_scope(left, right, a, scope, evidence)
             return (isinstance(a, dict) and a.get("role") == "figure_reference"
                     and self.step_scope(left, scope))
         return (left is right and left["kind"] == "table" and origin.startswith("/rows/") and target.startswith("/asset_parts/")
                 and isinstance(a, dict) and isinstance(b, dict) and b.get("cell_ref") == scope.get("cell_ref")
                 and scope.get("cell_ref") == {"row": a.get("row"), "column": a.get("column")})
+
+    def direct_figure_scope(self, action, visual, part, scope, evidence) -> bool:
+        page = action["file_page"]
+        if (action["kind"] != "paragraph" or type(page) is not int or page != visual["file_page"]
+                or page != scope.get("file_page") or "document_root_id" not in scope
+                or not isinstance(part, dict) or part.get("role") != "figure_reference"):
+            return False
+        reference = direct_figure_reference(action["text_content"])
+        if reference is None or reference.span("reference") != (part.get("block_start"), part.get("block_end")):
+            return False
+        # The caption and body must belong to the same provider visual group,
+        # with one explicitly labelled target on this page.
+        targets = [(caption, body) for body in self.by_page[page] if body["kind"] in {"image", "chart"}
+                   for caption in self.by_page[page] if caption["kind"] == "caption"
+                   and caption.get("parent_block_id") == body.get("parent_block_id")
+                   and self.blocks.get(body.get("parent_block_id"), {}).get("kind") in {"image_group", "chart_group"}
+                   and (match := _FIGURE.match(caption["text_content"]))
+                   and match["label"].casefold() == reference["label"].casefold()]
+        return (len(targets) == 1 and targets[0][1] is visual
+                and any(self.refs(ref, owner=targets[0][0].get("raw_ref")) for ref in evidence))
 
     def within(self, block, ancestor) -> bool:
         current = block["id"]
@@ -823,6 +877,20 @@ class _QC:
         expected_numbers = set(_NUMBER_WORD.findall(unicodedata.normalize("NFKC", native)))
         observed_numbers = set(_NUMBER_WORD.findall(unicodedata.normalize("NFKC", parsed)))
         if explained < length or expected_numbers - observed_numbers:
+            labels = self.diagram_labels(blocks, number)
+            difference = expected - _comparison_chars(parsed)
+            if labels:
+                # These native marks remain a figure-region receipt and are
+                # never added to an answer or converted into body text.
+                label_text = "\n".join(label["text"] for label in labels)
+                label_chars = _comparison_chars(label_text)
+                if difference & label_chars:
+                    self.checks["inventory"].setdefault("visual_native_text", []).extend(labels)
+                    explained = (expected & (_comparison_chars(parsed) + label_chars)).total()
+                    observed_numbers.update(_NUMBER_WORD.findall(unicodedata.normalize("NFKC", label_text)))
+                    if explained == length and not expected_numbers - observed_numbers:
+                        return
+                    parsed = f"{parsed}\n{label_text}"
             manual_blocks = [block for block in blocks if block.get("source_kind") == "manual"]
             declared_removals = Counter()
             removed_numbers = set()
@@ -843,6 +911,32 @@ class _QC:
                 return
             self.issue("inventory", "QC_NATIVE_TEXT_DISCREPANCY", file_page=number,
                        native_chars=length, explained_chars=explained, unmatched_number_count=len(expected_numbers - observed_numbers))
+
+    def diagram_labels(self, blocks, number):
+        figures, text_boxes = [], []
+        for block in blocks:
+            if block["structure_role"] != "leaf":
+                continue
+            for region in block["locator"].get("regions", []):
+                box = normalized_bbox(region.get("bbox_normalized"))
+                if not box or region.get("geometry_status") != "exact":
+                    continue
+                if block["kind"] in {"image", "chart"} and (box[2] - box[0]) * (box[3] - box[1]) <= .35:
+                    if block["structured_content"].get("asset_refs") and any(
+                            link["relation_type"] == "caption_of" for link in self.by_to[block["id"]]):
+                        figures.append((block["id"], box))
+                elif block["text_content"].strip():
+                    text_boxes.append(box)
+        labels = []
+        for line, ref in self.native_lines(number):
+            if _DIAGRAM_LABEL.fullmatch(line["text"]) is None:
+                continue
+            x0, y0, x1, y1 = line["bbox"]
+            owners = [identifier for identifier, (a, b, c, d) in figures if a <= x0 < x1 <= c and b <= y0 < y1 <= d]
+            if len(owners) != 1 or any(a < x1 and x0 < c and b < y1 and y0 < d for a, b, c, d in text_boxes):
+                continue
+            labels.append({**line, "file_page": number, "block_id": owners[0], "raw_ref": ref, "state": "pending_human"})
+        return labels
 
     def inherited(self) -> None:
         issues = self.ir.get("issues")
