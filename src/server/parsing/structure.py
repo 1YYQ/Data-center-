@@ -29,6 +29,9 @@ _TABLE_CONT = re.compile(r"^\s*(?:[（(]\s*(?:续|continued)\s*[）)]|续表\b|c
 _ACTION = re.compile(r"按(?:下|住|动)|开启|打开|关闭|切换|\b(?:press|hold|open|close|switch)\b", re.I)
 _SYMBOL = r"(?:[A-Za-zα-ωΑ-Ω]|\\(?:alpha|beta|gamma|delta|theta|lambda|mu|rho|sigma|phi|omega))(?:_(?:\{[A-Za-z0-9]{1,12}\}|[A-Za-z0-9]))?"
 _TOKEN = re.compile(rf"{_SYMBOL}|\d+(?:\.\d+)?|[+\-*/=^(){{}}\[\]\s]")
+_STYLED_SYMBOL = re.compile(r"\\mathsf\s*\{\s*(?P<letter>[A-Za-z])\s*\}(?:\s*_\s*\{(?P<sub>[A-Za-z0-9]{1,12})\})?")
+_LAYOUT_TOKEN = re.compile(r"\\(?:frac|cdot|left|right)(?![A-Za-z])")
+_TRAILING_TAG = re.compile(r"\\tag\s*\{(?:[IVX]{1,8}|[A-Z]?[0-9]{1,5})\}\s*$")
 _FORMULA_SOURCE = re.compile(
     rf"^\s*(?:公式\s*|(?:equation|formula)\s+)[（(]?(?P<label>{_IDENT})[）)]?\s*"
     rf"(?:(?:中[，,]?\s*|[,，]\s*|where\s+)(?P<symbol>{_SYMBOL})\s*(?:表示|为|denotes\b|means\b)\s*\S|"
@@ -51,6 +54,34 @@ def _id(*parts: str) -> str:
 def _field(block: dict, name: str) -> dict:
     ref = block["raw_ref"]
     return {**ref, "json_pointer": f"{ref['json_pointer']}/{name}"}
+
+
+def _symbol_value(raw: str) -> str | None:
+    if styled := _STYLED_SYMBOL.fullmatch(raw):
+        letter, sub = styled.group("letter", "sub")
+        return f"{letter}_{{{sub}}}" if sub else letter
+    return raw if re.fullmatch(_SYMBOL, raw) else None
+
+
+def _formula_ranges(expression: str) -> dict | None:
+    """Recognize a bounded TeX subset and retain the exact source character spans."""
+    if not expression or len(expression) > 2000:
+        return None
+    if tag := _TRAILING_TAG.search(expression):
+        expression = expression[:tag.start()]
+    occurrences = defaultdict(list)
+    pos = 0
+    while pos < len(expression):
+        token = (_STYLED_SYMBOL.match(expression, pos) or _LAYOUT_TOKEN.match(expression, pos)
+                 or _TOKEN.match(expression, pos))
+        if token is None:
+            return None
+        if symbol := _symbol_value(token[0]):
+            if token[0].isascii() and token[0].isalpha() and pos and expression[pos - 1].isascii() and expression[pos - 1].isalpha():
+                return None
+            occurrences[symbol].append({"source_start": pos, "source_end": token.end()})
+        pos = token.end()
+    return occurrences or None
 
 
 def _part_value(block: dict, pointer: str):
@@ -404,19 +435,14 @@ class _Recovery:
             expression = structured.get("latex_raw", "")
             if re.fullmatch(_IDENT, label) and block["reading_order"] is not None:
                 formulas[(self.scope(block)["section_id"], label.casefold())].append(block)
-            tokens = list(_TOKEN.finditer(expression)) if len(expression) <= 2000 else []
-            if not expression or "".join(token[0] for token in tokens) != expression or re.search(
-                    r"[A-Za-z]{2,}", re.sub(r"\\[a-z]+|_\{[^{}]+\}", "", expression)):
+            occurrences = _formula_ranges(expression)
+            if occurrences is None:
                 self.issue("STRUCTURE_FORMULA_SYMBOLS_UNRESOLVED", block)
                 continue
             raw_formula = next((part["raw_ref"] for part in structured.get("parts", []) if part["kind"] == "latex_raw"), None)
             if raw_formula is None:
                 self.issue("STRUCTURE_FORMULA_SYMBOLS_UNRESOLVED", block)
                 continue
-            occurrences = defaultdict(list)
-            for token in tokens:
-                if re.fullmatch(_SYMBOL, token[0]):
-                    occurrences[token[0]].append({"source_start": token.start(), "source_end": token.end()})
             structured["formula_symbols"] = [{"symbol": symbol, "raw_ref": raw_formula, "ranges": ranges}
                                              for symbol, ranges in occurrences.items()]
             required_symbols[block["id"]] = {symbol: f"/formula_symbols/{index}" for index, symbol in enumerate(occurrences)}
@@ -544,10 +570,14 @@ class _Recovery:
                         continue
                 for header_ptr, (header, axis) in sources.items():
                     header_ref = {"row": header["row"], "column": header["column"]}
-                    identifier = self.relation("header_of", block, block, "html_header_axis_and_grid",
+                    evidence = [_cell_evidence(header), _cell_evidence(cell)]
+                    manual = structured.get("manual_correction", {}).get("column_headers_ref") if header["row"] == 0 else None
+                    if manual is not None:
+                        evidence.append({**manual, "json_pointer": f"{manual['json_pointer']}/{header['column']}"})
+                    identifier = self.relation("header_of", block, block, "review_candidate_column_header" if manual else "html_header_axis_and_grid",
                         from_part=header_ptr, to_part=pointer, scope=self.scope(block, table_id=block["id"],
                             axis=axis, header_cell=header_ref, value_cell={"row": row, "column": col}),
-                        evidence=[_cell_evidence(header), _cell_evidence(cell)])
+                        evidence=evidence)
                     cell["header_refs"].append({**header_ref, "relation_id": identifier})
                     table_relation_count += 1
             assets_by_cell = defaultdict(list)
@@ -582,6 +612,11 @@ class _Recovery:
             body_types = {f"{provider}_body"} | ({"algorithm_body"} if provider == "code" else set())
             bodies = [child for child in children if child.get("provider_type") in body_types]
             captions = [child for child in children if child.get("provider_type") == f"{provider}_caption"]
+            if not captions and provider in {"image", "chart"}:
+                corrected = [child for child in children if child["kind"] == "caption" and child["source_kind"] == "manual"
+                             and child.get("provider_type") == f"{provider}_footnote" and _FIGURE.match(child["text_content"])]
+                if len(corrected) == 1:
+                    captions = corrected
             if len(bodies) != 1:
                 continue  # The normalization issue preserves the untrusted container.
             body = bodies[0]
@@ -589,9 +624,12 @@ class _Recovery:
                 if not caption["text_content"].strip():
                     self.issue("STRUCTURE_CAPTION_CONTENT_UNRESOLVED", caption)
                     continue
+                evidence = [group["raw_ref"], caption["raw_ref"], body["raw_ref"]]
+                if caption.get("provider_type") == f"{provider}_footnote":
+                    evidence.append(caption["structured_content"]["manual_correction"]["request_ref"])
                 self.relation("caption_of", caption, body, "provider_visual_container_membership",
                     scope=self.scope(body, visual_group_id=group["id"]),
-                    evidence=[group["raw_ref"], caption["raw_ref"], body["raw_ref"]])
+                    evidence=evidence)
             if provider not in {"image", "chart"}:
                 continue
             visual_ids.add(body["id"])

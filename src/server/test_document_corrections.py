@@ -35,6 +35,30 @@ def _edit(block, **extra):
             "basis": {"file_page": block["file_page"], "description": "复核原页同一段正文"}, **extra}
 
 
+def test_reviewed_column_headers_keep_cells_and_bind_original_and_claim():
+    box = [.1, .2, .7, .5]
+    table = {"type": "table", "bbox": box, "content": [{"type": "table_body", "bbox": box,
+        "content": "<table><tr><td>Lens</td><td>Reading</td></tr><tr><td>1</td><td>6 mm</td></tr></table>"}]}
+    setup = _input([_page(1)], [_raw_page(0, table)])
+    parent = normalize_ir(**setup)
+    child = normalize_ir(**{**setup, "run_id": str(uuid4()), "raw_artifact_id": str(uuid4())})
+    body = next(block for block in parent["blocks"] if block["kind"] == "table")
+    claim = {"block_id": body["id"], "reason": "Compare printed header", "basis": {"file_page": 1, "description": "First ruled row"},
+             "column_headers": [{"column": 0, "text": "Lens"}, {"column": 1, "text": "Reading"}]}
+    request = str(uuid4())
+    corrected = apply_manual_corrections(child, parent_ir=parent, correction_artifact_id=request, payload={"blocks": [claim]})
+    structured = recover_structure(corrected)
+    changed = next(block for block in structured["blocks"] if block["kind"] == "table")
+    assert changed["text_content"] == body["text_content"]
+    assert changed["structured_content"]["manual_correction"]["requires_source_review"]
+    links = [r for r in structured["relations"] if r["relation_type"] == "header_of"]
+    assert {(r["from_part"], r["to_part"]) for r in links} == {("/rows/0/0", "/rows/1/0"), ("/rows/0/1", "/rows/1/1")}
+    assert all(any(ref["artifact_id"] == request for ref in r["basis"]["evidence"]) for r in links)
+    claim["column_headers"][1]["text"] = "Different text"
+    with pytest.raises(ParseContractError, match="IR_CORRECTION_HEADER_MISMATCH"):
+        apply_manual_corrections(child, parent_ir=parent, correction_artifact_id=request, payload={"blocks": [claim]})
+
+
 def test_manual_text_proves_unicode_against_frozen_request_and_keeps_old_ir(correction_source):
     parent, child, request_artifact = correction_source
     parent["blocks"][0]["review_status"] = "approved"

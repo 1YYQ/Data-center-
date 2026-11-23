@@ -40,6 +40,18 @@ def _relation_part(relation, endpoint, by_id):
     return _resolve(block["structured_content"], pointer) if pointer else block
 
 
+def test_styled_equation_symbols_keep_original_ranges_and_exclude_tag():
+    raw = r"\mathsf {f} = \frac {1}{4} \cdot \left(\mathsf {s} - \frac {\left(\mathsf {x} _ {1} - \mathsf {x} _ {2}\right) ^ {2}}{\mathsf {s}}\right)\tag{I}"
+    normal, _ = _source([_node(raw, "equation")])
+    structured = recover_structure(normal)
+    formula = next(block for block in structured["blocks"] if block["kind"] == "formula")
+    symbols = formula["structured_content"]["formula_symbols"]
+    assert {entry["symbol"] for entry in symbols} == {"f", "s", "x_{1}", "x_{2}"}
+    distance = next(entry for entry in symbols if entry["symbol"] == "s")
+    assert [raw[span["source_start"]:span["source_end"]] for span in distance["ranges"]] == [r"\mathsf {s}"] * 2
+    assert not formula["structured_content"]["condition_refs"]
+
+
 def test_structure_preserves_source_and_recovers_five_relationship_families():
     normal, source = _source([
         _node("操作步骤", "doc_title", level=1),

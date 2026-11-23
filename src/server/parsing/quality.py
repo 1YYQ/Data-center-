@@ -10,7 +10,7 @@ import unicodedata
 from .ir import RAW_MEMBER, RENDERER
 from .local_pdf import normalized_bbox
 from .local_pipeline import ParseContractError, _member_name, fingerprint
-from .structure import RECOVERY_VERSION, _part_value
+from .structure import RECOVERY_VERSION, _part_value, _symbol_value
 
 
 CHECKER_REVISION = "dc.pdf-source-qc/1"
@@ -513,6 +513,13 @@ class _QC:
                     and isinstance(a, dict) and a.get("role") == "parameter_unit"
                     and isinstance(b, dict) and b.get("role") == "parameter_value")
         if kind == "header_of":
+            manual = left["structured_content"].get("manual_correction", {}).get("column_headers_ref")
+            if manual is not None and isinstance(a, dict) and a.get("row") == 0:
+                if (left.get("source_kind") != "manual" or not self.refs(manual)
+                        or type(a.get("column")) is not int
+                        or not any(item == {**manual, "json_pointer": f"{manual['json_pointer']}/{a['column']}"}
+                                   for item in evidence)):
+                    return False
             return (left is right and left["kind"] == "table" and origin.startswith("/rows/") and target.startswith("/rows/")
                     and isinstance(a, dict) and a.get("header") is True and isinstance(b, dict) and b.get("header") is False
                     and self.header_scope(a, b, scope))
@@ -559,7 +566,8 @@ class _QC:
         if not isinstance(raw, str) or not isinstance(ranges, list) or not ranges or not self.refs(endpoint.get("raw_ref"), owner=block.get("raw_ref")):
             return False
         return all(isinstance(span, dict) and _interval(span.get("source_start"), span.get("source_end"), len(raw))
-                   and raw[span["source_start"]:span["source_end"]] == endpoint.get("symbol") for span in ranges)
+                   and isinstance(endpoint.get("symbol"), str)
+                   and _symbol_value(raw[span["source_start"]:span["source_end"]]) == endpoint["symbol"] for span in ranges)
 
     def step_scope(self, step, scope) -> bool:
         detail = step["structured_content"].get("step")

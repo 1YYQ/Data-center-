@@ -2,7 +2,7 @@
 
 更新日期：2026-11-23。[任务工作台新版](../design/任务工作台全新设计.md)第一版UI已由用户确认通过；本轮首期本地功能补齐及实际依赖端到端工程验证已完成（DONE / VERIFIED_LOCAL_SYNTHETIC）。新增资料实际经过MinerU Standard、常驻切分、真实BGE/PGvector、Pi SDK和百炼，再在Chrome核对原文；角色/独立审批授权、分享与资料撤权、反馈和实际服务重启恢复也已验证。具体范围、原始失败和证明边界见[本轮验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md#首期功能补齐与实际依赖端到端2026-11-22)，当前运行及后续依赖见tasks顶部。用户先前指出mock不能证明真实闭环的纠正保留，不把本轮工程验证升级为企业真实验收或用户整体功能接受。
 
-项目 example 原件实测已完成上传、离线解析、原页复核以及未发布资料的员工拒答，样本为已登记的两页G1。正式首问仍等待质检复核、业务签认及发布，真实外部查询仍须逐用途准入。范围、耗时及隔离说明见[原件实测记录](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#项目-example-原件实测2026-11-23)。
+项目 example 的两页 G1 已完成公式、表头和图注的针对性原页核验及同源校正。原件实际离线重解析、校正、候选切分和员工拒答有独立证据。原页对公式变量 `s` 的定义冲突、图与操作步骤的关联及其余证据覆盖仍待复核；正式发布和冷启动首问仍受这些复核、真实签认及逐用途准入约束。范围、耗时和后续依赖见[当前调度](../../specs/001-device-operation-maintenance-query/tasks.md#当前调度与本次审查preflight-001)。
 
 冷启动首问专项已完成限定本地验证（DONE / VERIFIED_LOCAL_SYNTHETIC）：受控新路径SDK首读由旧296–323秒降至新78–89秒，重复读取另计，不能精确分离纯OS缓存占比。实际唯一实例重启后HTTP就绪22.928秒、首问准备75.906秒、提交至formal答案123.402秒，3份真实百炼回执、BGE/PGvector、六证据和原文核对通过；不再按暖态4秒解释首次。已修复Windows大stdin管道写入先于超时等待而阻塞的问题，准备失败零调用、原task显式恢复/恢复前撤权拒绝通过。当前Pi rev8/单份BGE及原轻量续验恢复，备份仍停用；Windows整机重启/全机缓存驱逐、强断电/磁盘失效未验证。方法、数值及限制见[冷启动指标](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#冷启动首问与缓存归因2026-11-23)，原失败/候选及下一依赖见tasks顶部。
 

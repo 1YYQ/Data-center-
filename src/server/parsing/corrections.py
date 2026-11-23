@@ -10,10 +10,11 @@ from .local_pdf import normalized_bbox
 from .local_pipeline import ParseContractError, fingerprint
 
 
-_EDIT_FIELDS = {"block_id", "ordinal", "text", "kind", "locator", "reason", "basis"}
+_EDIT_FIELDS = {"block_id", "ordinal", "text", "kind", "locator", "reason", "basis", "column_headers"}
 _EDITABLE = {"paragraph", "title", "step", "warning", "header", "footer", "footnote", "caption",
              "ref_text", "aside_text", "page_number"}
-_PROMOTIONS = {"paragraph": {"step", "warning"}, "ref_text": {"step", "warning"}, "aside_text": {"warning"}}
+_PROMOTIONS = {"paragraph": {"step", "warning"}, "ref_text": {"step", "warning"}, "aside_text": {"warning"},
+               "footnote": {"caption"}}
 _IDENTITY = ("document_version_id", "source_file_id", "source_sha256", "profile", "actual_profile", "raw_contract", "page_count")
 _PAGE_FRAME = ("file_page", "media_box_pt", "crop_box_pt", "rotation", "user_unit", "width_pt", "height_pt", "transforms")
 _REVIEW_FIELDS = {"approved", "review", "review_status", "review_reason", "reviewed_at", "reviewed_by", "reviewer_id"}
@@ -200,7 +201,7 @@ def _with_inherited_block(block, parent, index, parent_run_id, mapping, normaliz
     if (not isinstance(request, dict) or not isinstance(request.get("artifact_id"), str)
             or not isinstance(request.get("json_pointer"), str) or not isinstance(regions, list)
             or manual.get("requires_source_review") is not True or not isinstance(parent.get("text_content"), str)
-            or not isinstance(parent.get("kind"), str) or parent["kind"] not in _EDITABLE):
+            or not isinstance(parent.get("kind"), str) or parent["kind"] not in _EDITABLE | {"table"}):
         raise ParseContractError("IR_CORRECTION_INHERITANCE_INVALID")
     # The previous generation's direct-parent pointer remains in that frozen
     # IR. This generation links to its own alias of the direct parent instead.
@@ -297,6 +298,24 @@ def _require_inherited_manual(candidate: dict, parent_ir: dict, nodes: dict) -> 
             raise ParseContractError("IR_CORRECTION_INHERITANCE_INVALID")
 
 
+def _mark_column_headers(structured: dict, submitted: object) -> None:
+    """Accept a source-reviewed, unmerged first row without rewriting cells."""
+    rows, width = structured.get("rows"), structured.get("column_count")
+    if (not isinstance(rows, list) or len(rows) < 2 or type(width) is not int
+            or not 1 <= width <= 512 or not isinstance(submitted, list) or len(submitted) != width
+            or len(rows[0]) != width):
+        raise ParseContractError("IR_CORRECTION_HEADER_MISMATCH")
+    for column, (cell, claim) in enumerate(zip(rows[0], submitted, strict=True)):
+        if (not isinstance(claim, dict) or set(claim) != {"column", "text"}
+                or type(claim["column"]) is not int or claim["column"] != column or cell.get("column") != column
+                or cell.get("row") != 0 or cell.get("rowspan") != 1 or cell.get("colspan") != 1
+                or cell.get("value_state") != "extracted" or not cell.get("text", "").strip()
+                or claim["text"] != cell["text"] or cell.get("header_scope") not in {None, "col"}):
+            raise ParseContractError("IR_CORRECTION_HEADER_MISMATCH")
+    for cell in rows[0]:
+        cell.update(header=True, header_scope="col")
+
+
 def apply_manual_corrections(normalized_child: dict, *, parent_ir: dict, correction_artifact_id: str, payload: dict) -> dict:
     """Create a candidate in the child run and keep original locator and text evidence distinct.
 
@@ -325,15 +344,17 @@ def apply_manual_corrections(normalized_child: dict, *, parent_ir: dict, correct
         raise ParseContractError("IR_CORRECTION_ARTIFACT_INVALID")
     edited = set()
     for index, edit in enumerate(edits):
-        if not isinstance(edit, dict) or set(edit) - _EDIT_FIELDS or not {"text", "kind", "locator"}.intersection(edit):
+        if not isinstance(edit, dict) or set(edit) - _EDIT_FIELDS or not {"text", "kind", "locator", "column_headers"}.intersection(edit):
             raise ParseContractError("IR_CORRECTION_INVALID")
         parent = _target(edit, by_parent_id, by_parent_ordinal)
         if parent["id"] in edited:
             raise ParseContractError("IR_CORRECTION_DUPLICATE")
         original_kind = parent.get("kind")
-        if original_kind == "table":
+        header_edit = "column_headers" in edit
+        if ((original_kind == "table") != header_edit
+                or header_edit and {"text", "kind", "locator"}.intersection(edit)):
             raise ParseContractError("IR_CORRECTION_TABLE_UNSUPPORTED")
-        if (parent.get("structure_role") != "leaf" or not isinstance(original_kind, str) or original_kind not in _EDITABLE
+        if (parent.get("structure_role") != "leaf" or not isinstance(original_kind, str) or original_kind not in _EDITABLE | {"table"}
                 or parent.get("source_kind") not in {"parser", "manual"}):
             raise ParseContractError("IR_CORRECTION_TARGET_UNSUPPORTED")
         node = _bound_to_original(parent, parent_ir)
@@ -346,6 +367,8 @@ def apply_manual_corrections(normalized_child: dict, *, parent_ir: dict, correct
         kind = edit.get("kind", block["kind"])
         if not isinstance(kind, str) or (kind != block["kind"] and kind not in _PROMOTIONS.get(block["kind"], ())):
             raise ParseContractError("IR_CORRECTION_KIND_UNSUPPORTED")
+        if original_kind == "footnote" and kind == "caption" and block.get("provider_type") not in {"image_footnote", "chart_footnote"}:
+            raise ParseContractError("IR_CORRECTION_KIND_UNSUPPORTED")
         text = _plain_text(edit["text"], 12_000) if "text" in edit else block["text_content"]
         request_ref = {"artifact_id": correction_artifact_id, "json_pointer": f"/blocks/{index}"}
         structured = block["structured_content"]
@@ -354,8 +377,11 @@ def apply_manual_corrections(normalized_child: dict, *, parent_ir: dict, correct
         manual.setdefault("original_text_for_inventory", block["text_content"])
         original_regions = block["locator"].get("regions")
         changed_region = _claim_region(edit, block, request_ref) if "locator" in edit else None
-        if text == block["text_content"] and kind == block["kind"] and changed_region is None:
+        if text == block["text_content"] and kind == block["kind"] and changed_region is None and not header_edit:
             raise ParseContractError("IR_CORRECTION_NO_CHANGE")
+        if header_edit:
+            _mark_column_headers(structured, edit["column_headers"])
+            manual["column_headers_ref"] = {**request_ref, "json_pointer": request_ref["json_pointer"] + "/column_headers"}
         if changed_region is not None:
             manual.setdefault("original_regions", deepcopy(original_regions))
             block["locator"]["regions"] = [changed_region]
