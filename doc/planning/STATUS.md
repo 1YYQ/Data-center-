@@ -2,6 +2,8 @@
 
 更新日期：2026-11-23。[任务工作台新版](../design/任务工作台全新设计.md)第一版UI已由用户确认通过；本轮首期本地功能补齐及实际依赖端到端工程验证已完成（DONE / VERIFIED_LOCAL_SYNTHETIC）。新增资料实际经过MinerU Standard、常驻切分、真实BGE/PGvector、Pi SDK和百炼，再在Chrome核对原文；角色/独立审批授权、分享与资料撤权、反馈和实际服务重启恢复也已验证。具体范围、原始失败和证明边界见[本轮验收记录](../../specs/001-device-operation-maintenance-query/artifacts/acceptance/status.md#首期功能补齐与实际依赖端到端2026-11-22)，当前运行及后续依赖见tasks顶部。用户先前指出mock不能证明真实闭环的纠正保留，不把本轮工程验证升级为企业真实验收或用户整体功能接受。
 
+项目 example 原件实测已完成上传、离线解析、原页复核以及未发布资料的员工拒答，样本为已登记的两页G1。正式首问仍等待质检复核、业务签认及发布，真实外部查询仍须逐用途准入。范围、耗时及隔离说明见[原件实测记录](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#项目-example-原件实测2026-11-23)。
+
 冷启动首问专项已完成限定本地验证（DONE / VERIFIED_LOCAL_SYNTHETIC）：受控新路径SDK首读由旧296–323秒降至新78–89秒，重复读取另计，不能精确分离纯OS缓存占比。实际唯一实例重启后HTTP就绪22.928秒、首问准备75.906秒、提交至formal答案123.402秒，3份真实百炼回执、BGE/PGvector、六证据和原文核对通过；不再按暖态4秒解释首次。已修复Windows大stdin管道写入先于超时等待而阻塞的问题，准备失败零调用、原task显式恢复/恢复前撤权拒绝通过。当前Pi rev8/单份BGE及原轻量续验恢复，备份仍停用；Windows整机重启/全机缓存驱逐、强断电/磁盘失效未验证。方法、数值及限制见[冷启动指标](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#冷启动首问与缓存归因2026-11-23)，原失败/候选及下一依赖见tasks顶部。
 
 2026-11-22准备耗时专项已完成（DONE / VERIFIED_LOCAL_SYNTHETIC）：瓶颈定位为SDK整树串行小文件读取，改为全部字节的有界Node读取与前后身份/目录检查。实测本地准备123.093→4.453秒、网页完整查询159.979→50.021秒；单独交替暖态测量约48%代码收益，不能把全部差值归因代码或承诺冷机时限。精确范围见[准备指标](../../specs/001-device-operation-maintenance-query/artifacts/metrics/status.md#首次本地准备优化2026-11-22)。该轮验证时实例沿用8879/原PG与原索引、Pi rev7；后续冷启动的当前实例/修订见tasks顶部。
